@@ -1,0 +1,7 @@
+try{
+
+}catch(Exception e){
+	System.debug('Exception' + e.getMessage() + e.getStackTraceString() + ' alla linea: ' + e.getLineNumber());
+	myMsg = new ApexPages.Message(ApexPages.Severity.ERROR,'Errore: contattare un amministratore.');
+	ApexPages.addMessage(myMsg);
+}

@@ -1,0 +1,1069 @@
+/********************************************************************
+ *
+ * Class: TestUtils
+ * Descriptio: util class for testing. Useful to prepare data needed 
+ * in testing like Customers, Orders, Campaigns, ...
+ *
+ ********************************************************************/
+@isTest
+public class TestUtils {
+    /*
+     Constant for default settings
+     */
+    public static final Integer NoOfBookingGroups = 5;
+    public static final Integer NoOfSpotTypes = 3;
+    public static final Integer NoOfBookingLines = 2;
+    
+    /*
+     Static member variables. Useful for data access by Test classes 
+     */
+    public static Map<ID, Booking_Group__c> bookingGroupMapStatic{get; set;}
+    public static Map<ID, Sales_Product__c> salesProductMapStatic{get; set;}
+    public static Map<ID, Spot_Type__c> spotTypeMapStatic{get; set;}
+    public static Map<ID, Sales_Product_Group__c> salesProductGroupMapStatic{get; set;}
+    public static Map<ID, Matrix__c> matrixMapStatic{get; set;}
+    public static Map<ID, Booking_Line__c> bookingLineMapStatic{get; set;}
+    public static Map<ID, Channel__c> channelMapStatic{get; set;}
+    public static Map<ID, Content_Category__c> contentCategoryMapStatic{get; set;}
+    
+    public static CampaignOption__c campaignOption{get; set;}
+    /*
+     Method Name: createCutomers
+     Input Parameters: 
+         - n: nb of customer to create
+     Return parameters:
+         - List<Customers>: list of created customers 
+    
+     Description: create a List of Customers.       
+      */
+    public static List<Customer__c> createCustomers(Integer n) {
+        List<Customer__c> custList = new List<Customer__c>();
+        for(Integer i = 1; i <= n; i++){
+            custList.add(new Customer__c(name = String.valueOf('name' + i), id_Ibms__c = String.valueOf('name' + i)));
+        }
+        return custList;
+    }
+    
+    /*
+     Method Name: createOrders
+     Input Parameters: 
+         - n: nb of orders to create
+         - customerList: list of customer associated to orders
+     Return parameters:
+         - List<Order__c>: list of created orders commercial
+    
+     Description: create a List of Orders. Each order is associated to a customer on the passed list.
+                  Return null if the nb of customer is not equal to the number of customer in the passed customerList.
+     
+     */
+    public static List<Order__c> createOrders(Integer n, List<Customer__c> customerList) {
+        if(customerList.size() != n){
+            return null;
+        }
+        List<Order__c> orderList = new List<Order__c>();
+        for(Integer i = 1; i <= n; i++){
+            orderList.add(new Order__c(
+                    name = String.valueOf('name' + i),
+                    Customer__c = customerList[i-1].id,
+                    Accettato_dal_cliente__c = true));
+        }
+        return orderList;
+    }
+    
+     /*
+     Method Name: createCommercialOffers
+     Input Parameters: 
+         - n: nb of commercial offers to create
+         - coType: type of commercial offer like "Libera", "Serie A",...
+     Return parameters:
+         - List<Commercial_Offer__c>: list of created commercial offers. 
+    
+     Description: create a List of commercial offer of type coType.
+      
+     */
+    public static List<Commercial_Offer__c> createCommercialOffers(Integer n, String coType) {
+        return TestUtils.createCommercialOffers(n, coType, '3 livelli');
+    }
+    
+    public static List<Commercial_Offer__c> createCommercialOffers(Integer n, String coType, String architecture) {
+        return TestUtils.createCommercialOffers(n, coType, architecture, false);    
+    }
+    
+    public static List<Commercial_Offer__c> createCommercialOffers(Integer n, String coType, String architecture, Boolean dateOptionEditabili) {
+        List<Commercial_Offer__c> coList = new List<Commercial_Offer__c>();
+        for(Integer i = 1; i <= n; i++){
+                    coList.add(new Commercial_Offer__c(
+                    name = String.valueOf('name' + i),
+                    Commercial_Offer_Code__c = String.valueOf('code' + i),
+                    Valid_From__c = Date.today(),
+                     type__c = coType,
+                     Architecture__c = architecture,
+                     Date_Option_Editabili__c = dateOptionEditabili
+                    ));
+        }
+        return coList;
+    }
+    
+    /*
+     Method Name: insertCommercialOffers
+     Input Parameters: 
+         - n: nb of commercial offers to insert
+         - coType: type of commercial offer like "Libera", "Serie A",...
+         - noOfBGs: number of booking groups. This value is used to set many list size like Sales_Product, Sales_product_Groups,..
+     Return parameters:
+         - List<Commercial_Offer__c>: list of inserted commercial offers. 
+    
+     Description: insert a List of commercial offer of type coType. It insert also al other data needed to insert a commercial offers.
+                  The commercial offers are published.
+      
+     */
+    public static List<Commercial_Offer__c> insertCommercialOffers(
+    		Integer n,
+    		String coType,
+    		Integer noOfBGs){
+
+    	List<Commercial_Offer__c> commercialOfferList = createCommercialOffers(n, coType);
+    	insert commercialOfferList;
+
+    	List<Matrix__c> matrixCombinedList = new List<Matrix__c>();
+    	List<Booking_Group__c> bgList = createBookingGroups(noOfBGs);
+    	insert bgList;
+    	bookingGroupMapStatic = new Map<ID, Booking_Group__c>(bgList);
+
+    	List<Sales_Product_Group__c> spgList = createSalesProductGroups(noOfBGs);
+    	insert spgList;
+    	salesProductGroupMapStatic = new Map<ID, Sales_Product_Group__c>(spgList);
+
+    	List<Sales_Product__c> spList = createSalesProducts(noOfBGs, spgList, bgList);
+    	insert spList;
+    	salesProductMapStatic = new Map<ID, Sales_Product__c>(spList);
+
+    	for(Integer i = 1; i <= n; i++){
+    		List<Matrix__c> tempList = createMatrixes(noOfBGs, bgList, spList, spgList, commercialOfferList[i-1]);
+    		matrixCombinedList.addAll(tempList);
+    	}
+    	insert matrixCombinedList;
+    	matrixMapStatic = new Map<ID, Matrix__c>(matrixCombinedList);
+
+    	for(Commercial_Offer__c co : commercialOfferList){
+    		co.Published__c = true;
+    	}
+    	update commercialOfferList;
+
+    	List<Content_Category__c> ccList = createContentCategories(n);
+    	insert ccList;
+    	contentCategoryMapStatic = new Map<ID, Content_Category__c>(ccList);
+
+    	List<Spot_Type__c> stList = createSpotTypes(n, ccList);
+    	insert stList;
+    	spotTypeMapStatic = new Map<ID, Spot_Type__c>(stList);
+
+    	List<CommercialOfferToSpotType__c> coToSt = createCommercialOfferToSpotTypes(n, commercialOfferList, stList);
+    	insert coToSt;
+
+    	List<SalesProductToBookingGroup__c> spToBg = createSpToBg(spList.size(), bgList, spList);
+    	insert spToBg;
+
+    	return commercialOfferList;
+    }
+    
+    /*
+     Method Name: createBookingGroups
+     Input Parameters: 
+         - n: nb of BG to create
+     Return parameters:
+         - List<Booking_Group>: list of created BG 
+    
+     Description: create a List of BGs.       
+     */
+    public static List<Booking_group__c> createBookingGroups(Integer n) {
+        List<Booking_group__c> bgList = new List<Booking_group__c>();
+        for(Integer i = 1; i <= n; i++){
+            bgList.add(new Booking_group__c(
+                    name = String.valueOf('name' + i),
+                    Bookable__c = true,
+                    Id_IBMS__c = String.valueOf('ibmsBG' + i)));
+        }
+        return bgList;
+    }
+    
+    /*
+     Method Name: createSalesProductGroups
+     Input Parameters: 
+         - n: nb of SPG to create
+     Return parameters:
+         - List<Sales_product_group__c>: list of created SPG
+    
+     Description: create a List of SPGs.       
+     */
+    public static List<Sales_product_group__c> createSalesProductGroups(Integer n) {
+        List<Sales_product_group__c> spgList = new List<Sales_product_group__c>();
+        List<String> standardNamesList = new List<String>{'1 - Morning','2 - Day','3 - Prime','4 - Second Prime','5 - Night'};
+        for(Integer i = 1; i <= n; i++){
+            spgList.add(new Sales_product_group__c(
+                    name = (standardNamesList.size() >= i) ? standardNamesList[i-1] : String.valueOf('name' + i),
+                    Active__c = true,
+                    Display_name__c = 'name' + i,
+                    IBMS_Id__c = String.valueOf('ibmsSPG' + i)));
+        }
+        return spgList;
+    }
+    
+    /*
+     Method Name: createSalesProducts
+     Input Parameters: 
+         - n: nb of SP to create
+     Return parameters:
+         - List<Sales_product__c>: list of created SP
+    
+     Description: create a List of SPs.       
+     */
+    public static List<Sales_product__c> createSalesProducts(Integer n, List<Sales_product_Group__c> spgList, List<Booking_Group__c> bgList) {
+        List<Sales_product__c> spList = new List<Sales_product__c>();
+//      List<Sales_product_Group__c> spgList = TestUtils.salesProductGroupMapStatic.values();
+//      List<Booking_Group__c> bgList = TestUtils.bookingGroupMapStatic.values();
+        
+        Integer j = 0;
+        for(Booking_Group__c bg : bgList){
+            
+            for(Integer i = 1; i <= n; i++){
+                spList.add(new Sales_product__c(
+                    name = String.valueOf('name' + j),
+                    SPKey__c = String.valueOf('key' + j),
+                    Id_IBMS__c = String.valueOf('ibmsSP' + j),
+                    Default_Sales_product_group__c = spgList[i-1].id,
+                    Day_Sales_Product_Group__c = spgList[i-1].id
+                    ));
+                    j++;
+            }
+        }
+        return spList;
+    }
+    
+     /*
+     Method Name: createContentCategories
+     Input Parameters: 
+         - n: nb of Content Category to create
+     Return parameters:
+         - List<Sales_product__c>: list of created Content Category
+    
+     Description: create a List of Content Categories.       
+     */
+    public static List<Content_category__c> createContentCategories(Integer n) {
+        List<Content_category__c> ccList = new List<Content_category__c>();
+        for(Integer i = 1; i <= n; i++){
+            ccList.add(new Content_category__c(
+                    Id_IBMS__c = String.valueOf('ibmsCC' + i)));
+        }
+        return ccList;
+    }
+    
+    /*
+     Method Name: createSpotTypes
+     Input Parameters: 
+         - n: nb of ST to create
+         - ccList: list of content category 
+     Return parameters:
+         - List<Spot_type__c>: list of created STs
+    
+     Description: create a List of STs, associating to each a content cantegory.
+                  Return null if the nb of STs is different from the nb of Content Category.       
+     */
+    public static List<Spot_type__c> createSpotTypes(Integer n, List<Content_Category__c> ccList) {
+        if(ccList.size() != n){
+            return null;
+        }
+        List<Spot_type__c> spList = new List<Spot_type__c>();
+        for(Integer i = 1; i <= n; i++){
+            spList.add(new Spot_type__c(
+                    name = String.valueOf('name' + i),
+                    Duration_unit_1__c = (i == 1) ? 450 : i * 10,
+                    Duration__c = (i == 1) ? 450 : i * 10,
+                    Content_Category__c = ccList[i-1].id,   
+                    Number_of_spot_units__c = i,
+                    Id_IBMS__c = String.valueOf('ibmsST' + i),
+                    Active__c = true));
+        }
+        return spList;
+    }
+    
+    /*
+     Method Name: createCommercialOfferToSpotTypes
+     Input Parameters: 
+         - n: nb of COTST
+         - ccList: list of commercial offer
+         - stList: list of Spot Type 
+     Return parameters:
+         - List<Spot_type__c>: list of created STs
+    
+     Description: create a List of COTSTs, associating each to a commercial offer and spot type.
+                  Return null if the nb of COTSs to create is different from the nb of coList and stlist.       
+     */
+    public static List<CommercialOfferToSpotType__c> createCommercialOfferToSpotTypes(
+            Integer n, 
+            List<Commercial_Offer__c> coList,
+            List<Spot_Type__c> stList) {
+        if(coList.size() != n || coList.size() != stList.size()){
+            return null;
+        }
+        List<CommercialOfferToSpotType__c> coToSpList = new List<CommercialOfferToSpotType__c>();
+        for(Integer i = 1; i <= n; i++){
+            if(coList[i-1].id == null || stList[i-1] == null){
+                continue;
+            }
+            coToSpList.add(new CommercialOfferToSpotType__c(
+                    Commercial_Offer__c = coList[i-1].id,
+                    Spot_Type__c = stList[i-1].id));
+        }
+        return coToSpList;
+    }
+    
+    /*
+     Method Name: createSpToBg
+     Input Parameters: 
+         - n: nb of SpToBG
+         - bgList: list of booking group
+         - spList: list of sales product 
+     Return parameters:
+         - List<SalesProductToBookingGroup__c>: list of created SpToBGs
+    
+     Description: create a List of SpToBG, associating each to booking group and sales product.
+                  Return null if the nb of SpToBG to create is different from the nb of bgList and spList.       
+     */
+    public static List<SalesProductToBookingGroup__c> createSpToBg(
+            Integer n, 
+            List<Booking_group__c> bgList,
+            List<Sales_product__c> spList) {
+        List<SalesProductToBookingGroup__c> spToBgList = new List<SalesProductToBookingGroup__c>();
+        
+        Integer j = 0;
+        for(Integer i = 0; i < n; i++){
+            if(0 == Math.mod(i, bgList.size())){
+                j++;
+            }
+            spToBgList.add(new SalesProductToBookingGroup__c(
+                Booking_group__c = bgList[j-1].id,
+                Sales_product__c = spList[i].id));
+        }
+        return spToBgList;
+    }
+    
+    /*
+     Method Name: createBgToAvail
+     Input Parameters: 
+         - n: nb of BgToAvail
+         - bgList: list of booking group
+         - avList: list of avail type
+     Return parameters:
+         - List<BookingGroupToAvailType__c>: list of created BgToAvails
+    
+     Description: create a List of BgToAvail, associating each to booking group and avail.
+                  Return null if the nb of BgToAvail to create is different from the nb of bgList and avList.       
+     */
+    public static List<BookingGroupToAvailType__c> createBgToAvail(
+            Integer n, 
+            List<Booking_group__c> bgList,
+            Avail_Type__c avail) {
+        if(bgList.size() != n ){
+            return null;
+        }
+        List<BookingGroupToAvailType__c> bgToAvList = new List<BookingGroupToAvailType__c>();
+        for(Integer i = 1; i <= n; i++){
+            if(bgList[i-1].id == null || avail == null){
+                continue;
+            }
+            bgToAvList.add(new BookingGroupToAvailType__c(
+                    Booking_group__c = bgList[i-1].id,
+                    Avail_Type__c = avail.id));
+        }
+        return bgToAvList;
+    }
+    
+    /*
+     Method Name: createChToBg
+     Input Parameters: 
+         - n: nb of ChToBG
+         - bgList: list of booking group
+         - chList: list of channels 
+     Return parameters:
+         - List<ChannelToBookingGroup__c>: list of created ChToBGs
+    
+     Description: create a List of ChToBG, associating each to booking group and channel.
+                  Return null if the nb of ChToBG to create is different from the nb of bgList and chList.       
+     */
+    public static List<ChannelToBookingGroup__c> createChToBg(
+            Integer n, 
+            List<Booking_group__c> bgList,
+            List<Channel__c> chList) {
+        if(bgList.size() != n || bgList.size() != chList.size()){
+            return null;
+        }
+        List<ChannelToBookingGroup__c> chToBgList = new List<ChannelToBookingGroup__c>();
+        for(Integer i = 1; i <= n; i++){
+            if(bgList[i-1].id == null || chList[i-1] == null){
+                continue;
+            }
+            chToBgList.add(new ChannelToBookingGroup__c(
+                    Booking_group__c = bgList[i-1].id,
+                    Channel__c = chList[i-1].id));
+        }
+        return chToBgList;
+    }
+    
+    /*
+     Method Name: createMatrixes
+     Input Parameters: 
+         - n: nb of matrix
+         - bgList: list of booking group
+         - spList: list of Sales Product
+         - spgList: list of Sales Product Group
+         - co: commercial offer
+     Return parameters:
+         - List<Matrix__c>: list of matrix
+    
+     Description: create a List of matrix__c
+           
+     */
+     
+    public static List<Matrix__c> createMatrixes(
+            Integer n, 
+            List<Booking_group__c> bgList,
+            List<Sales_product__c> spList,
+            List<Sales_product_group__c> spgList,
+            Commercial_Offer__c co) {
+        if(bgList.size() != n || co == null){ //bgList.size() != spList.size() || 
+            return null;
+        }
+        List<Matrix__c> mList = new List<Matrix__c>();
+        Integer j = 0;
+        for(Booking_Group__c bg : bgList){
+            for(Integer i = 1; i <= n; i++){
+                if(bg.id == null || spList[j] == null ){//|| spgList[i-1] == null
+                    continue;
+                }
+                Matrix__c m = new Matrix__c(
+                        Booking_group__c = bg.id,
+                        Sales_product_group__c = spList[j].Default_Sales_product_group__c,//spgList[i-1].id,
+                        Commercial_Offer__c = co.id,
+                        Sales_product__c = spList[j].id);
+                if(co.Serie_A__c){
+                    m.Calcio_Label__c = 'name'+j;
+                    m.Calcio_Label_Order__c = j;
+                }
+                mList.add(m);
+                
+                j++;
+            }
+        }
+        return mList;
+    }
+    
+    /*
+     Method Name: createChannels
+     Input Parameters: 
+         - n: nb of channels
+     Return parameters:
+         - List<Channel__c>: list of created channels
+    
+     Description: create a List of channels
+           
+     */
+    public static List<Channel__c> createChannels(Integer n) {
+        List<Channel__c> chList = new List<Channel__c>();
+        for(Integer i = 1; i <= n; i++){
+            chList.add(new Channel__c(
+                    name = String.valueOf('name' + i),
+                    Position__c = i,
+                    Active__c = true,
+                    Canale_ottimizzatore__c = true,
+                    Valid_from__c = Date.today(),
+                    Valid_To__c = null,
+                    IBMS_Id__c = String.valueOf('ibmsCh' + i)));
+        }
+        return chList;
+    }
+    
+    /*
+     Method Name: createRatecards
+     Input Parameters: 
+         - mList: Matrix list
+         - ccList: Content Category list
+     Return parameters:
+         - List<Ratecard__c>: list of created Ratecards
+    
+     Description: create a List of Ratecards for the given matrix and content category lists.
+     TODO: Enhance the way Content Category list is used; as of now it has either as many elements as mList or one only
+           
+     */
+    public static List<Ratecard__c> createRatecards(List<Matrix__c> mList, List<Content_Category__c> ccList) {
+        if(spotTypeMapStatic == null || spotTypeMapStatic.isEmpty()){
+            throw new TestUtilsException('SpotTypeMapStatic must exist for proper usage of createRatecards() method');
+        }else if(contentCategoryMapStatic == null || contentCategoryMapStatic.isEmpty()){
+            throw new TestUtilsException('ContentCategoryMapStatic must exist for proper usage of createRatecards() method');
+        }else if(bookingGroupMapStatic == null || bookingGroupMapStatic.isEmpty()){
+            throw new TestUtilsException('BookingGroupMapStatic must exist for proper usage of createRatecards() method');
+        }else if(salesProductMapStatic == null || salesProductMapStatic.isEmpty()){
+            throw new TestUtilsException('SalesProductMapStatic must exist for proper usage of createRatecards() method');
+        }else if(ccList.size() != 1 && mList.size() != ccList.size()){
+            throw new TestUtilsException('Sizes of Matrix list and Content Category List are not equal');
+        }
+        List<Ratecard__c> rList = new List<Ratecard__c>();
+        Integer price = 10;
+        Integer i = 0;
+        for(Matrix__c m : mList){
+            rList.add(new Ratecard__c(
+                    Booking_Group__c = m.Booking_Group__c,
+                    Content_Category__c = (ccList.size() == 1) ? ccList[0].id : ccList[i].id,
+                    Valid_From__c = Date.today(), 
+                    Valid_To__c = Date.today().addDays(7),
+                    Sales_Product__c = m.Sales_Product__c,
+                    Value__c = price,
+                    Token__c = 1,
+                    IBMS_Booking_Group_Id__c = bookingGroupMapStatic.get(m.Booking_Group__c).Id_IBMS__c,
+                    Version__c = 10,
+                    Compound_IBMS_Key__c =
+                            ((ccList.size() == 1) ? ccList[0].Id_IBMS__c : ccList[i].Id_IBMS__c) + '#' + 
+                             bookingGroupMapStatic.get(m.Booking_Group__c).Id_IBMS__c + '#' + 
+                             salesProductMapStatic.get(m.Sales_Product__c).Id_IBMS__c
+                    ));
+            price += 10;
+            i++;
+        }
+        return rList;
+    }
+    
+    /*
+     Method Name: createCampaigns
+     Input Parameters: 
+         - n: number of campaigns
+         - coList: list of commercial offer
+         - orderList: list of orders
+         - stList: list of spot type
+     Return parameters:
+         - List<CampaignOption__c>: list of campaign
+    
+     Description: create a List of Campaign 
+           
+     */
+    public static List<CampaignOption__c> createCampaigns(
+            Integer n, 
+            List<Commercial_Offer__c> coList,
+            List<Order__c> orderList,
+            List<Spot_Type__c> stList){
+        if(n != coList.size() || n != orderList.size() || n != stList.size()){
+            return null;
+        }
+        List<CampaignOption__c> campList = new List<CampaignOption__c>();
+        for(Integer i = 1; i <= n; i++){
+            campList.add(new CampaignOption__c(
+                    Commercial_Offer__c = coList[i-1].id,
+                    Spot_Type__c = stList[i-1].id,
+                    Order__c = orderList[i-1].id,
+                    Status__c = 'In preparazione',
+                    Start_date__c = Date.today(), 
+                    End_Date__c = Date.today().addDays(6),
+                    With_restrictions__c = true,
+                    name = String.valueOf(i)
+                    ));
+        }
+        return campList;
+    }
+    
+    
+    /*
+     Method Name: createBookingLines
+     Input Parameters: 
+         - n: number of BL
+         - co: commercial offer
+         - bgList: list of BG
+         - chList: list of channels
+         - spList: list of SP
+         - stList: list of ST
+         - spgList: list of SPG
+     Return parameters:
+         - List<CampaignOption__c>: list of campaign
+    
+     Description: create a List of BLs. 
+           
+     */
+    public static List<Booking_Line__c> createBookingLines(
+            Integer n, 
+            CampaignOption__c co,
+            List<Booking_Group__c> bgList,
+            List<Channel__c> chList,
+            List<Sales_Product__c> spList,
+            List<Spot_Type__c> stList,
+            List<Sales_Product_Group__c> spgList){
+        if(bgList == null || bgList.size() < n){
+            throw new TestUtilsException('Not enough Booking Groups (' + n + ') for Booking Line creation.');
+        }else if(chList == null || chList.size() < n){
+            throw new TestUtilsException('Not enough Channels (' + n + ') for Booking Line creation.');
+        }else if(spList == null || spList.size() < n){
+            throw new TestUtilsException('Not enough Sales Products (' + n + ') for Booking Line creation.');
+        }else if(stList == null){
+            throw new TestUtilsException('Spot Type List is null for Booking Line creation.');
+        }else if(spgList == null || spgList.size() < n){
+            throw new TestUtilsException('Not enough Sales Product Groups (' + n + ') for Booking Line creation.');
+        }
+        List<Booking_Line__c> blList = new List<Booking_Line__c>();
+        Integer j=0;
+        for(Integer i = 1; i <= n; i++){
+            blList.add(new Booking_Line__c(
+                    Campaign_Option__c = co.id,
+                    Booking_Group__c = bgList[i-1].id,
+                    Sales_Product__c = spList[j].id,
+                    Spot_type__c = (stList.size() >= i) ? stList[i-1].id : stList[0].id,
+                    Number_of_spots__c = i,
+                    Price__c = i * 10,
+                    Sales_product_group__c = spList[j].Default_Sales_product_group__c,
+                    Channel__c = chList[i-1].id,
+                    Commercial_Offer__c = co.Commercial_offer__c
+                    ));
+                    j++;
+        }
+        return blList;
+    }
+    
+    /*
+     Method Name: createBookingLines
+     Input Parameters: 
+         - n: number of BL
+         - co: commercial offer
+         - bgList: list of BG
+         - chList: list of channels
+         - spList: list of SP
+         - stList: list of ST
+         - spgList: list of SPG
+     Return parameters:
+         - List<CampaignOption__c>: list of campaign
+    
+     Description: create a List of BL for a given Commercial Offer 
+           
+     */
+    public static List<Booking_Line__c> createBookingLines(Integer n, CampaignOption__c co){
+        return createBookingLines(
+            n, 
+            co,
+            bookingGroupMapStatic.values(),
+            channelMapStatic.values(),
+            salesProductMapStatic.values(),
+            spotTypeMapStatic.values(),
+            salesProductGroupMapStatic.values());
+    }
+    
+     /*
+     Method Name: createSpotTypeExclusions
+     Input Parameters: 
+         - matrixes: matrixes
+         - spotTypes: spot types
+     Return parameters:
+         - Spot_Type_exclusion__c: list of spot type exclusions
+    
+     Description: create a List of exclusions for a given matrixes and spot types 
+           
+     */
+    public static List<Spot_Type_exclusion__c> createSpotTypeExclusions(
+                                                 Integer n,
+                                                 List<Matrix__c> matrixes, 
+                                                 List<Spot_type__c> spotTypes){
+            List<Spot_type_exclusion__c> exclusions = new List<Spot_type_exclusion__c>();
+            for(Integer i=0; i < n; i++){
+                Spot_type_exclusion__c ex = new Spot_type_exclusion__c(
+                                                Matrix__c = matrixes.get(i).Id,
+                                                Tipo_spot__c = spotTypes.get(i).Id);
+                exclusions.add(ex);
+            }
+         return exclusions;    
+    }
+    
+        
+    
+    /*
+     Method Name: insertCampaignOption
+     Input Parameters: 
+         - commercialOfferType: commercial offer type
+     Return parameters:
+         - CampaignOption__c: list of campaign
+    
+     Description: create a List of BL for a given Commercial Offer 
+           
+     */
+    public static CampaignOption__c insertCampaignOption(String commercialOfferType){
+        return insertCampaignOption(commercialOfferType, NoOfBookingGroups, NoOfBookingLines);
+    }
+    public static CampaignOption__c insertCampaignOption(
+            String commercialOfferType,
+            Integer noOfBGs,
+            Integer noOfBLs){
+        List<Customer__c> customerList = createCustomers(1);
+        insert customerList;
+        
+        List<Order__c> orderList = createOrders(1, customerList);
+        insert orderList;
+        
+        List<Commercial_Offer__c> coList = insertCommercialOffers(1, commercialOfferType, noOfBGs);
+        List<CampaignOption__c> campList = createCampaigns(1, coList, orderList, spotTypeMapStatic.values());
+        insert campList[0];
+        
+        List<Channel__c> chList = createChannels(noOfBGs);
+        insert chList;
+        channelMapStatic = new Map<ID, Channel__c>(chList);
+        
+        List<Content_Category__c> ccList = new List<Content_Category__c>();
+        if(commercialOfferType == 'Olimpiadi'){
+            throw new TestUtilsException('TEMP Exception: we need to prepare separate logic for Olimpiadi Ratecards');
+        }else{
+            if(spotTypeMapStatic.containsKey(campList[0].Spot_Type__c) && 
+                    contentCategoryMapStatic.containsKey(spotTypeMapStatic.get(campList[0].Spot_Type__c).Content_Category__c)){
+                ccList.add(contentCategoryMapStatic.get(spotTypeMapStatic.get(campList[0].Spot_Type__c).Content_Category__c));
+            }else{
+                throw new TestUtilsException('Error in maps creation - not found a matching Content Category for a Campaign');
+            }
+        }
+        List<Ratecard__c> rList = createRatecards(matrixMapStatic.values(), ccList);
+        insert rList;
+        
+        List<Booking_Line__c> blList = createBookingLines(noOfBLs, campList[0]);
+        insert blList;
+        bookingLineMapStatic = new Map<ID, Booking_Line__c>(blList);
+        
+        Avail_type__c availType = new Avail_type__c(Network_Spots_Only__c=1);
+        insert availType;
+        
+        Avail__c avail = new Avail__c(
+                Booking_Group__c = TestUtils.bookingLineMapStatic.values()[0].Booking_Group__c,
+                Sales_product_group__c = TestUtils.bookingLineMapStatic.values()[0].Sales_Product_Group__c,
+                Sales_product__c = TestUtils.bookingLineMapStatic.values()[0].Sales_Product__c,
+                Content_category__c = TestUtils.spotTypeMapStatic.values()[0].Content_Category__c,
+                Avail_Type__c = availType.id,
+                Avail_totale__c = 10,
+                Avail_prenotato__c = 5,
+                Date__c = Date.today() + 6);
+        insert avail;
+        
+        List<BookingGroupToAvailType__c> bgToAv = createBgToAvail(noOfBGs, bookingGroupMapStatic.values(), availType);
+        insert bgToAv;
+        
+        List<ChannelToBookingGroup__c> chToBgList = createChToBg(noOfBGs, bookingGroupMapStatic.values(), chList);
+        insert chToBgList;
+        
+        return campList[0];
+    }
+    
+    /*
+     Method Name: prepareDataForCampaign
+     Input Parameters: 
+         - none
+     Return parameters:
+         - CampaignOption__c
+    
+     Description: create a default campaign option of type libera with all configurations inserted
+           
+     */
+    public static void prepareDataForCampaign(String campaignType) {
+        Rubric_Version_Default_Values__c rvdv = new Rubric_Version_Default_Values__c(name='ff', X1_Morning__c='1' , X2_Day__c='1' , X3_Prime__c='1' , X4_Second_Prime__c='1' , X5_Night__c='1');
+        insert rvdv;
+        
+        Rubric__c rub = new Rubric__c(name='1');
+        insert rub;
+        
+        TestUtils.campaignOption = TestUtils.insertCampaignOption(campaignType);
+        List<Booking_Line__c> wrongBLList = TestUtils.createBookingLines(
+            1, 
+            TestUtils.campaignOption,
+            new List<Booking_Group__c>{TestUtils.bookingGroupMapStatic.values()[0]},
+            new List<Channel__c>{TestUtils.channelMapStatic.values()[0]},
+            new List<Sales_Product__c>{TestUtils.salesProductMapStatic.values()[1]},
+            new List<Spot_Type__c>{TestUtils.spotTypeMapStatic.values()[0]},
+            new List<Sales_Product_Group__c>{TestUtils.salesProductGroupMapStatic.values()[1]});
+        wrongBLList[0].name = 'faulty BL';
+        insert wrongBLList;
+         
+        ID Id = TestUtils.campaignOption.Id;      
+        
+        Customer_Contract__c customerContract = new Customer_Contract__c(Id_IBMS__c='dfdf');
+        insert customerContract;
+        
+        Contract_Option__c contractOption = new Contract_Option__c(
+                Spot_Type__c = TestUtils.campaignOption.Spot_type__c, 
+                IBMS_Contract_Id__c='dfdf', 
+                Option_type__c='LENRAT',
+                Spot_Duration__c = TestUtils.spotTypeMapStatic.get(TestUtils.campaignOption.Spot_type__c).Duration_unit_1__c,
+                Length_factor_Pr__c = 1,
+                Content_Category__c =  TestUtils.spotTypeMapStatic.get(TestUtils.campaignOption.Spot_type__c).Content_Category__c,
+                Valid_from__c=Date.today()-10, 
+                Valid_to__c=Date.today()+10);
+        insert contractOption;
+        
+        
+
+    }
+    
+    
+    /*
+     Method Name: createChildrenCampaign
+     Input Parameters: 
+         - number of children to create
+         - parent campaign to set on children
+     Return parameters:
+         - List of children campaigns
+    
+     Description: Create a list of campaign children of input campaign
+           
+     */
+    public static List<CampaignOption__c> createChildrenCampaign(Integer n,CampaignOption__c campaign){
+         List<CampaignOption__c> campaigns = new List<CampaignOption__c>();
+         CampaignOption__c o;
+         for(Integer i=0; i < n; i++){
+            o = campaign.clone(false,true);
+            o.CampaignOptionParent__c = campaign.Id;
+            o.Name = campaign.Name + ' - ' + i;
+            campaigns.add(o);
+         }
+         return campaigns;
+    }
+    
+    /*
+     Method Name: createCommercialProduct
+     Input Parameters: 
+         - number of children to create
+         - parent campaign to set on children
+     Return parameters:
+         - List of children campaigns
+    
+     Description: Create a list of campaign children of input campaign
+           
+     */
+    public static List<Commercial_product__c> createCommercialProduct(Integer n){
+         List<Commercial_product__c> commercialProducts = new List<Commercial_product__c>();
+         for(Integer i = 0; i < n; i++){
+            Commercial_product__c p = new Commercial_product__c();
+            p.Name = 'Test ' + i;
+            commercialProducts.add(p);
+         }
+         return commercialProducts;
+    }
+    
+     /*
+     Method Name: createTokens
+     Input Parameters: 
+         - none
+     Return parameters:
+         - Administration_Data__c
+    
+     Description: Create custom setting administration data with token == 1
+           
+     */
+    public static Administration_Data__c createTokens(){
+        Administration_Data__c dataAdmin = new Administration_Data__c(Token__c = 1);
+        return dataAdmin;
+    }
+    
+    
+    /*
+     Method Name: createCampaignsB
+     Input Parameters: 
+         - coList: list of commercial offer
+         - orderList: list of orders
+         - stList: list of spot type
+         - List of campaign A 
+     Return parameters:
+         - List<CampaignOption__c>: list of campaign
+    
+     Description: create a List of Campaign 
+           
+     */
+    public static List<CampaignOption__c> createCampaignsB(
+            List<Commercial_Offer__c> coList,
+            List<Order__c> orderList,
+            List<Spot_Type__c> stList,
+            List<CampaignOption__c> campaignsA){
+        Integer n = campaignsA.size();
+        if(n != coList.size() || n != orderList.size() || n != stList.size()){
+            return null;
+        }
+        List<CampaignOption__c> campList = new List<CampaignOption__c>();
+        for(Integer i = 1; i <= n; i++){
+            campList.add(new CampaignOption__c(
+                    Commercial_Offer__c = coList[i-1].id,
+                    Spot_Type__c = stList[i-1].id,
+                    Order__c = orderList[i-1].id,
+                    Status__c = 'In preparazione',
+                    Start_date__c = Date.today(), 
+                    End_Date__c = Date.today().addDays(6),
+                    With_restrictions__c = true,
+                    name = String.valueOf(i),
+                    CampaignOption_Booked__c = campaignsA[i-1].Id
+                    ));
+        }
+        return campList;
+    }
+    
+    /*
+     Method Name: create contract options
+     Input Parameters: 
+         - spotTypes: list of spot types
+         - PremiumPositions: premium positions
+         - Content categories: list content categories
+         - String type the value is 'CONBRK', 'PLMSUR' or 'LENRAT'
+     Return parameters:
+         - List<contract_option__c>: list of contractOptions
+    
+     Description: create a List of Contract options
+           
+     */
+    public static Contract_option__c createContractOption(String id,String optionType){
+        if(optionType != 'CONBRK' && optionType !=  'PLMSUR' && optionType != 'LENRAT'){
+                    throw new SkyException('Option type not supported');
+        }
+        Contract_option__c c = new Contract_Option__c();
+        c.Length_factor_Pr__c = 2;
+        c.Spot_duration__c = 10;
+        c.Spot_type_Pr__c = 10;
+        c.Valid_from__c = system.today().addDays(-30);
+        c.Valid_to__c = system.today().addDays(30);
+        c.IBMS_Contract_Id__c = 'IBMS_' + id;
+        if(optionType == 'CONBRK'){
+            c.Spot_type__c = id;
+            c.Option_type__c = 'CONBRK';
+        }else if(optionType == 'PLMSUR'){
+            c.Premium_position__c = id;
+            c.Option_type__c = 'PLMSUR';
+        }else if(optionType == 'LENRAT'){
+            c.Content_category__c = id;
+            c.Option_type__c = 'LENRAT';
+        }        
+        return c;
+    }
+
+    /*
+     Input Parameters: 
+         - Number of business category to create
+     Return parameters:
+         - List<Business_category__c>: list of business category
+    
+     Description: create a list of business category
+           
+     */
+     public static List<Business_type__c> createBusinessType(Integer n){
+        List<Business_type__c> bt = new List<Business_type__c>();
+        for(integer i = 0; i < n; i++){
+            bt.add(new Business_type__c ( Name = 'BT ' + i, IBMS_Id__c = 'IBMSID' + i, Token__c = 1));
+        }
+        return bt;
+     }
+
+      /*
+     Input Parameters: 
+         - Number of business type to create
+     Return parameters:
+         - List<Business_type__c>: list of business type
+    
+     Description: create a list of business category
+           
+     */
+     public static List<Business_category__c> createBusinessCategory(Integer n){
+        List<Business_category__c> bs = new List<Business_category__c>();
+        for(integer i = 0; i < n; i++){
+            bs.add(new Business_category__c ( Name = 'BC ' + i, IBMS_Id__c = 'IBMSID' + i, Token__c = 1));
+        }
+        return bs;
+     }
+
+       /*
+     Input Parameters: 
+         - Commercial offer list, Business type list, Business category list
+     Return parameters:
+         - List<Business_type__c>: list of business type
+    
+     Description: create a list of business category
+           
+     */
+     public static List<BCBTtoCommOffer__c> createBCBTtoCommOffer(List<Commercial_Offer__c> cos, 
+                                                                  List<Business_category__c> bcs, 
+                                                                  List<Business_type__c> bts){
+
+
+        List<BCBTtoCommOffer__c> bcbt = new List<BCBTtoCommOffer__c>();
+        for(integer i = 0; i < cos.size(); i++){
+            bcbt.add(new BCBTtoCommOffer__c (   Name = 'BCBT ' + i, 
+                                                Business_type__c = bts[i].id, 
+                                                Business_category__c = bcs[i].id,
+                                                Commercial_offer__c = cos[i].id)
+                    );
+        }
+        return bcbt;
+     }
+
+
+     public static List<Revenue_type__c> createRevenueType(Integer n, boolean free){
+        List<Revenue_type__c> revenues = new List<Revenue_type__c>();
+        Revenue_type__c r;
+        for(integer i = 0; i < n; i++){
+            r  = new Revenue_type__c(Name = 'Revenue' + i, free__c = free);
+            revenues.add(r);
+        }
+        return revenues;
+     }
+
+
+
+     public static Target__c createTarget(){
+        Target__c target = new Target__c(
+                Name = 'Test',
+                Display_name__c = 'Test'
+            );
+        return target;
+     }
+
+
+     public static Caricamento_file__c createCaricamentoFile(){
+        Caricamento_file__c caricamento = new Caricamento_file__c(
+                Active__c = true,
+                NYEAR__c = '2014',
+                DWH_Send_Date__c = Date.today(),
+                NMONTH__c = '01'
+            );
+        return caricamento;
+     }
+
+     public static Universo__c createUniverso(Target__c t , Caricamento_file__c c){
+        Universo__c universo = new Universo__c(
+                Caricamento_file__c = c.Id,
+                Target__c = t.Id,
+                Universo_value__c = 4000,
+                Rete__c = 'Cielo'
+            );
+        return universo;
+     }
+
+
+     public static List<Audience__c> createAudience(Order__c currentOrder, 
+                                                    List<Channel__c> channels, 
+                                                    List<Sales_Product_Group__c> spgList,
+                                                    Caricamento_file__c caricamento,
+                                                    String rete){
+
+        List<Audience__c> audiences = new List<Audience__c>();
+        for(Integer i = 0; i < channels.size(); i++){
+
+            Audience__c a = new Audience__c(
+                    Channel__c = Channels[i].id,
+                    Eventi__c = spgList[i].id,
+                    Target__c = currentOrder.Target__c,
+                    Type__c = currentOrder.Stima_di__c,
+                    Rete__c = rete,
+                    Stima_ascolti__c = 1333,
+                    Caricamento_file__c = caricamento.Id
+                );
+            audiences.add(a);
+        }
+        return audiences;
+     }
+    
+
+    private class TestUtilsException extends Exception{
+        
+    }
+   
+}

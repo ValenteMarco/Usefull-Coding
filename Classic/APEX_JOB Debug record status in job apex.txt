@@ -1,0 +1,121 @@
+﻿
+Account[] accts = new List<Account>{
+	new Account(Name='Account1'),
+		new Account()};
+
+Database.SaveResult[] srList = Database.insert(accts, false);
+
+// Iterate through each returned result
+for (Database.SaveResult sr : srList) {
+	if (sr.isSuccess()) {
+		// Operation was successful, so get the ID of the record that was processed
+		System.debug('Successfully inserted account. Account ID: ' + sr.getId());
+	}else {
+		// Operation failed, so get all errors 
+		for(Database.Error err : sr.getErrors()) {
+			System.debug('The following error has occurred.'); 
+			System.debug(err.getStatusCode() + ': ' + err.getMessage());
+			System.debug('Account fields that affected this error: ' + err.getFields());
+		}
+	}
+}
+
+}
+
+
+// IMPORTANT *****DATABASE INSERT LIMITS:
+System.debug('AGGREGATE QUERIES USED= ' + Limit.getAggregateQueries() + ' WITH ANY LIMIT ' + getLimitAggregateQueries());   //Returns the total number of aggregate queries that can be processed with SOQL query statements.
+System.debug('CALLOUT USED= ' + Limit.getCallouts() + ' WITH ANY LIMIT ' + getLimitCallouts());	// Returns the number of Web service statements that have been processed.
+System.debug('CHILE RELATIONSHIP USED= ' + Limit.getChildRelationshipsDescribes() + ' WITH ANY LIMIT ' + getLimitChildRelationshipsDescribes());	//Deprecated. Returns the maximum number of child relationship objects that can be returned.
+System.debug('CPU USED= ' + Limit.getCpuTime() + ' WITH ANY LIMIT ' + getLimitCpuTime());	Returns the time limit (in milliseconds) of CPU usage in the current transaction.
+
+
+System.debug('C USED= ' + Limit.getCallouts() + ' WITH ANY LIMIT ' + getLimitCallouts());	// Returns the number of Web service statements that have been processed.
+System.debug('CALLOUT USED= ' + Limit.getCallouts() + ' WITH ANY LIMIT ' + getLimitCallouts());	// Returns the number of Web service statements that have been processed.
+System.debug('CALLOUT USED= ' + Limit.getCallouts() + ' WITH ANY LIMIT ' + getLimitCallouts());	// Returns the number of Web service statements that have been processed.
+System.debug('CALLOUT USED= ' + Limit.getCallouts() + ' WITH ANY LIMIT ' + getLimitCallouts());	// Returns the number of Web service statements that have been processed.
+
+
+getCpuTime()
+Returns the CPU time (in milliseconds) accumulated on the Salesforce servers in the current transaction.
+getLimitCpuTime()
+Returns the time limit (in milliseconds) of CPU usage in the current transaction.
+getDMLRows()
+Returns the number of records that have been processed with any statement that counts against DML limits, such as DML statements, the Database.emptyRecycleBin method, and other methods.
+getLimitDMLRows()
+Returns the total number of records that can be processed with any statement that counts against DML limits, such as DML statements, the database.EmptyRecycleBin method, and other methods.
+getDMLStatements()
+Returns the number of DML statements (such as insert, update or the database.EmptyRecycleBin method) that have been called.
+getLimitDMLStatements()
+Returns the total number of DML statements or the database.EmptyRecycleBin methods that can be called.
+getEmailInvocations()
+Returns the number of email invocations (such as sendEmail) that have been called.
+getLimitEmailInvocations()
+Returns the total number of email invocation (such as sendEmail) that can be called.
+getFieldsDescribes()
+Deprecated. Returns the number of field describe calls that have been made.
+getLimitFieldsDescribes()
+Deprecated. Returns the maximum number of field describe calls that can be made.
+getFieldSetsDescribes()
+Deprecated. Returns the number of field set describe calls that have been made.
+getLimitFieldSetsDescribes()
+Deprecated. Returns the maximum number of field set describe calls that can be made.
+getFindSimilarCalls()
+This method is deprecated. Returns the same value as getSoslQueries. The number of findSimilar methods is no longer a separate limit, but is tracked as the number of SOSL queries issued.
+getLimitFindSimilarCalls()
+This method is deprecated. Returns the same value as getLimitSoslQueries. The number of findSimilar methods is no longer a separate limit, but is tracked as the number of SOSL queries issued.
+getFutureCalls()
+Returns the number of methods with the future annotation that have been executed (not necessarily completed).
+getLimitFutureCalls()
+Returns the total number of methods with the future annotation that can be executed (not necessarily completed).
+getHeapSize()
+Returns the approximate amount of memory (in bytes) that has been used for the heap.
+getLimitHeapSize()
+Returns the total amount of memory (in bytes) that can be used for the heap.
+getMobilePushApexCalls()
+Returns the number of Apex calls that have been used by mobile push notifications during the current metering interval.
+getLimitMobilePushApexCalls()
+Returns the total number of Apex calls that are allowed per transaction for mobile push notifications.
+getPicklistDescribes()
+Deprecated. Returns the number of PicklistEntry objects that have been returned.
+getLimitPicklistDescribes()
+Deprecated. Returns the maximum number of PicklistEntry objects that can be returned.
+getQueries()
+Returns the number of SOQL queries that have been issued.
+getLimitQueries()
+Returns the total number of SOQL queries that can be issued.
+getQueryLocatorRows()
+Returns the number of records that have been returned by the Database.getQueryLocator method.
+getLimitQueryLocatorRows()
+Returns the total number of records that have been returned by the Database.getQueryLocator method.
+getQueryRows()
+Returns the number of records that have been returned by issuing SOQL queries.
+getLimitQueryRows()
+Returns the total number of records that can be returned by issuing SOQL queries.
+getQueueableJobs()
+Returns the number of queueable jobs that have been added to the queue per transaction. A queueable job corresponds to a class that implements the Queueable interface.
+getLimitQueueableJobs()
+Returns the maximum number of queueable jobs that can be added to the queue per transaction. A queueable job corresponds to a class that implements the Queueable interface.
+getRecordTypesDescribes()
+Deprecated. Returns the number of RecordTypeInfo objects that have been returned.
+getLimitRecordTypesDescribes()
+Deprecated. Returns the maximum number of RecordTypeInfo objects that can be returned.
+getRunAs()
+This method is deprecated. Returns the same value as getDMLStatements.
+getLimitRunAs()
+This method is deprecated. Returns the same value as getLimitDMLStatements.
+getSavepointRollbacks()
+This method is deprecated. Returns the same value as getDMLStatements.
+getLimitSavepointRollbacks()
+This method is deprecated. Returns the same value as getLimitDMLStatements.
+getSavepoints()
+This method is deprecated. Returns the same value as getDMLStatements.
+getLimitSavepoints()
+This method is deprecated. Returns the same value as getLimitDMLStatements.
+getScriptStatements()
+Deprecated. Returns a value that is based on CPU time usage and that is an approximation of script statement usage.
+getLimitScriptStatements()
+Deprecated. Returns the maximum number of Apex statements that can execute.
+getSoslQueries()
+Returns the number of SOSL queries that have been issued.
+getLimitSoslQueries()

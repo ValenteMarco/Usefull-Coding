@@ -1,0 +1,67 @@
+**codice per rendere il campo obbligatorio sola lettura inserendo una regola di convalida
+
+AND(  RecordTypeId="012F0000000wmdI", ISCHANGED(Name) ,
+$User.ProfileId="00eF00000013ske"
+)
+
+per il nome opportunità dopo esser sottomesso non può piu modificarlo(diventa sola lettura)
+per testarlo si entra cn utente utet si va al cliente all ordine dello stesso si cambia lo stato in sottomesso e da l errore poichè nn è sola lettura dp ke si ha salvato
+
+
+
+fare regola di convalida x tutti i campi obbbligatori dell utente capo agenzia utet
+per gli altri campi codice lo stesso si va a modificare il campo ISCHANGED cioè il nome...
+
+
+**codice pulsante per passaggio parametri
+
+{!REQUIRESCRIPT("/soap/ajax/16.0/connection.js")} 
+
+//verifico nelle 3 righe seguenti che l'utente in esecuzione sia il titolare dell'opportunità, altrimenti la creazione fallisce 
+
+var UtenteId ='{!User.Id}'; 
+//var ExistingOwner = '{!Opportunity.OwnerId}'; 
+var faseOpp='{!Opportunity.StageName}'; 
+var valoreAmmontareProgetti='{!Opportunity.Controllo_ammontare_progetti__c}'; 
+if ((faseOpp != 'Annullata')&& (valoreAmmontareProgetti==1) ) { 
+
+
+
+window.open("https://na1.salesforce.com/a06/e?Name={!Opportunity.Name}&00N30000007u0Se={!Opportunity.Ammontare_totale_numero__c}&CF00N30000007tPWQ={!Opportunity.Account}&CF00N30000007tPWQ_lkid={!Opportunity.AccountId}&CF00N30000007tRce={!Opportunity.Name}&CF00N30000007tRce_lkid={!Opportunity.Id}&CF00N30000007tRcP={!Opportunity.Cliente_finale__c}&CF00N30000007tRcP_lkid={!Opportunity.Cliente_finaleId__c}&retURL=/{!Progetto__c.Id}&cancelURL=/{!Opportunity.Id}"); 
+
+
+}
+
+
+
+**pulsante javascript ke aggiorna 2 campi di un oggetto
+
+
+Pulsante Javascript che aggiorna tre campi di un oggetto custom Prova__c:
+ Campo_testo__c è un campo testo
+ prova2__c è un campo a selezione multipla
+ Data_chiusura__c è una data
+http://salesforce.adobeconnect.com/buttonsandlinks/            tutorial pulsanti javascript
+
+{!REQUIRESCRIPT("/soap/ajax/16.0/connection.js")}
+var update_CR = []; /*Declaring an array to pass the parameters */
+var CR= new sforce.SObject("Prova__c"); /* Declaring an object for the Credit request */
+CR.Id='{!Prova__c.Id}'; /*setting the ID of the object to the Id of the current credit request*/
+CR.Campo_testo__c ="funziona!!!!!!!!"; /* Setting the checkbox value as true */
+CR.Data_chiusura__c=new Date(); /* valorizza la data chiusura con oggi */
+CR.prova2__c="Operatività del DFL;Status porta accesso al DFL;Ordini";
+update_CR.push(CR); /*pushing the updated object in queue*/
+result_Update=sforce.connection.update(update_CR); /*updating the object*/
+window.location.reload(); /* asking the page to refresh */
+
+
+
+
+
+
+
+***regola di convalida: se l importo è <= a 0 non può salvare lo stato in sottomesso
+
+
+AND( NOT(ISPICKVAL( StageName , "In lavorazione") ), 
+ Importo_risultante__c  <= 0, (ISPICKVAL( StageName ,"Sottomesso") ) )

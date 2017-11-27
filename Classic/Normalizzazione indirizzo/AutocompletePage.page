@@ -1,0 +1,158 @@
+<apex:page standardController="Sede_impianto__c" extensions="AutoCompleteController2">
+    <c:flowResource ></c:flowResource>
+    <!-- JQuery Files -->
+    <apex:includeScript value="{!URLFOR($Resource.FlowResource,'js/jquery.min.js')}" />
+    <apex:includeScript value="{!URLFOR($Resource.FlowResource,'js/jquery-ui.min.js')}" />
+    <apex:stylesheet value="{!URLFOR($Resource.FlowResource,'css/jquery-ui.css')}"/>
+
+   <script type="text/javascript">
+
+        var __sfdcSessionId = '{!GETSESSIONID()}';
+        var wrapper={
+            comune:'{!$Component.j_id0.form1.block1.sezioneNorm.comuneItem.comune}',
+            particella:'{!$Component.j_id0.form1.block1.sezioneNorm.particellaItem.particella}',
+            ricsedecritica:'{!$Component.j_id0.form1.block1.ricsedecritica}',
+            idsedeimpianto:'{!$Component.j_id0.form1.block1.idsedeimpianto}',
+            indirizzo:'{!$Component.j_id0.form1.block1.sezioneNorm.indirizzoItem.indirizzo}',
+            civico:'{!$Component.j_id0.form1.block1.sezioneNorm.civicoItem.civico}',
+            idGroupComuni:'{!$Component.j_id0.form1.block1.idGruppoComuni}',
+            idGroupVie:'{!$Component.j_id0.form1.block1.idGruppoVie}',
+            idGroupCivici:'{!$Component.j_id0.form1.block1.idGruppoCivici}',
+            istat:'{!$Component.j_id0.form1.block1.istat}',
+            provincia:'{!$Component.j_id0.form1.block1.provincia}',
+            siglaprovincia:'{!$Component.j_id0.form1.block1.prov}',
+            cittaws:'{!$Component.j_id0.form1.block1.cittaws}',
+            esponenteCivico:'{!$Component.j_id0.form1.block1.esponenteCivico}',
+            civicoNew:'{!$Component.j_id0.form1.block1.civicoNew}',
+            normalizzato:'{!$Component.j_id0.form1.block1.normalizzato}',
+            nuovaCopertura:'{!$Component.j_id0.form1.block1.nuovaCopertura}',
+            idSgu:'{!$Component.j_id0.form1.block1.idSgu}',
+            idCabinet:'{!$Component.j_id0.form1.block1.idCabinet}',
+            idSguFtts:'{!$Component.j_id0.form1.block1.idSguFtts}',
+            tipoelemento:'{!$Component.j_id0.form1.block1.tipoelemento}',
+            civicows:'{!$Component.j_id0.form1.block1.civicows}',
+            indirizzows:'{!$Component.j_id0.form1.block1.indirizzows}'
+        }
+
+
+
+        jQuery(function($) {
+
+            callNormalizationWS('{!$Component.j_id0.form1.block1.sezioneNorm.comuneItem.comune}', 3, 'comune','Citt__c',wrapper);
+            callNormalizationWS('{!$Component.j_id0.form1.block1.sezioneNorm.indirizzoItem.indirizzo}', 3, 'via','Indirizzo__c',wrapper);
+            callNormalizationWS('{!$Component.j_id0.form1.block1.sezioneNorm.civicoItem.civico}', 1, 'civico','Numero_civico__c',wrapper);
+
+
+        });
+    </script>
+
+     <!--  <apex:actionFunction name="mostraIndirizzo" action="{!mostraIndirizzo}" status="statusIndirizzo" reRender="comunePanel, veriIndi, hiddenPanel"/>
+    -->
+    <apex:form id="form1">
+
+    <apex:pageblock id="block1">
+    <apex:pageMessages />
+    <apex:pageBlockButtons >
+    <apex:commandButton action="{!getCoordinateAndCoverage}" value="visualizza in mappa" reRender="form1" />
+    <apex:commandButton action="{!salva}" value="salva" />
+    </apex:pageBlockButtons>
+    <apex:pageBlockSection id="sezioneNorm" title="Sede" columns="1">
+    
+    <apex:pageBlockSectionItem >
+    <!--<apex:outputLabel value="Cliente"></apex:outputLabel>
+    <apex:inputfield value="{!sedeImpianto.Account__c}" />-->
+    </apex:pageBlockSectionItem>
+        <apex:pageBlockSectionItem id="comuneItem">
+            <apex:outputLabel value="{!$ObjectType.Sede_impianto__c.fields.Citt__c.label}" />
+            <apex:outputPanel styleClass="requiredInput" layout="block">
+                <apex:outputPanel styleClass="requiredBlock" layout="block"/>
+                <apex:inputField style="width:350px" value="{!sedeImpianto.Citt__c }" id="comune" styleClass="form-control" />
+                <apex:outputPanel layout="block" styleClass="errorMsg" rendered="{!erroreComune!=null}">
+                    <strong>Errore: </strong>
+                    {!erroreComune}
+                </apex:outputPanel>
+            </apex:outputPanel>
+        </apex:pageBlockSectionItem>
+
+        <apex:pageBlockSectionItem id="indirizzoItem">
+            <apex:outputLabel value="{!$ObjectType.Sede_impianto__c.fields.Indirizzo__c.label}" />
+            <apex:outputPanel styleClass="requiredInput" layout="block">
+                <apex:outputPanel styleClass="requiredBlock" layout="block"/>
+                <apex:inputField style="width:350px" value="{!sedeImpianto.Indirizzo__c }" id="indirizzo" styleClass="form-control"/>
+                <apex:outputPanel layout="block" styleClass="errorMsg" rendered="{!erroreIndirizzo!=null}">
+                    <strong>Errore: </strong>
+                    {!erroreIndirizzo}
+                </apex:outputPanel>
+            </apex:outputPanel>
+        </apex:pageBlockSectionItem>
+
+        <apex:pageBlockSectionItem id="particellaItem">
+            <apex:outputLabel value="{!$ObjectType.Sede_impianto__c.fields.Particella__c.label}" />
+            <apex:outputPanel styleClass="requiredInput" layout="block">
+                <apex:outputPanel styleClass="requiredBlock" layout="block"/>
+                <apex:inputField style="background-color:rgb(235, 235, 228);width:350px" styleClass="form-control" value="{!sedeImpianto.Particella__c }" id="particella">
+                    <apex:actionStatus id="statusCivico" startText="Caricando {!$ObjectType.Sede_impianto__c.fields.Numero_civico__c.label}.." />
+                    <script>
+                          document.getElementById('{!$Component.sezioneNorm.particellaItem.particella}').readOnly = true;
+                    </script>
+                </apex:inputField>
+
+            </apex:outputPanel>
+        </apex:pageBlockSectionItem>
+
+        <apex:pageBlockSectionItem id="civicoItem">
+            <apex:outputLabel value="{!$ObjectType.Sede_impianto__c.fields.Numero_civico__c.label}" />
+            <apex:outputPanel styleClass="requiredInput" layout="block">
+                <apex:outputPanel styleClass="requiredBlock" layout="block"/>
+                <apex:inputField style="width:350px" value="{!sedeImpianto.Numero_civico__c}" styleClass="form-control" id="civico"/>
+                <apex:outputPanel layout="block" styleClass="errorMsg" rendered="{!erroreCivico!=null}">
+                    <strong>Errore: </strong>
+                    {!erroreCivico}
+                </apex:outputPanel>
+
+            </apex:outputPanel>
+
+        </apex:pageBlockSectionItem>
+        <apex:pageBlockSectionItem >
+        <apex:outputLabel value="{!$ObjectType.Sede_impianto__c.fields.Tipo__c.label}" />
+            <apex:outputPanel styleClass="requiredInput" layout="block">
+                <apex:outputPanel styleClass="requiredBlock" layout="block"/>
+                <apex:inputField style="width:350px" value="{!sedeImpianto.Tipo__c}" styleClass="form-control" id="civico"/>
+            </apex:outputPanel>
+            </apex:pageBlockSectionItem>
+    </apex:pageBlockSection>
+
+
+    <!--  <a href="#" onclick="callNormalizationWS('{!$Component.comune}', 3, 'comune', '{!$Component.idGruppoComuni}', '{!$Component.idGruppoVie}', '{!$Component.idGruppoCivici}', true, '{!$Component.campoSede}', '{!$Component.istat}', '{!$Component.provincia}', '{!$Component.cittaws}', '{!$Component.esponenteCivico}', '{!$Component.civicoNew}', '{!$Component.normalizzato}', '{!$Component.nuovaCopertura}', '{!$Component.idSgu}', '{!$Component.idCabinet}', '{!$Component.idSguFtts}', '{!$Component.tipoelemento}', '{!$Component.civicows}')">click</a> -->
+    <apex:actionFunction name="updateSede" action="{!updateSede}" rerender="hiddenPanel" />
+    <!-- <a href="#" onclick="updateSede()">mandaSede</a> -->
+    <apex:outputPanel id="hiddenPanel">
+        <!--  INPUT HIDDEN NEW  -->
+        <apex:inputHidden value="{!sedeImpianto.IdGruppoCivici__c}"          id="idGruppoCivici"/>
+        <apex:inputHidden value="{!sedeImpianto.Esponente_Civico__c}"        id="esponenteCivico"/>
+        <apex:inputHidden value="{!sedeImpianto.Civico__c}"                  id="civicoNew"/>
+        <apex:inputHidden value="{!sedeImpianto.IdGruppoComuni__c}"          id="idGruppoComuni"/>
+        <apex:inputHidden value="{!sedeImpianto.IdGruppoVie__c}"             id="idGruppoVie"/>
+        <apex:inputHidden value="{!sedeImpianto.Indirizzo_Normalizzato__c}"  id="normalizzato"/>
+        <apex:inputHidden value="{!sedeImpianto.Nuova_Copertura__c}"         id="nuovaCopertura"/>
+        <apex:inputHidden value="{!sedeImpianto.Codice_ISTAT__c}"            id="istat"/>
+        <apex:inputHidden value="{!sedeImpianto.Sigla_provincia__c}"         id="prov"/>
+        <apex:inputHidden value="{!sedeImpianto.Codice_vendibilit__c}"       id="idSgu"/>
+        <apex:inputHidden value="{!sedeImpianto.FW_Id_Cabinet__c}"           id="idCabinet"/>
+        <apex:inputHidden value="{!sedeImpianto.FW_Id_SGUFTTs__c}"           id="idSguFtts"/>
+        <apex:inputHidden value="{!sedeImpianto.Tipo_Elemento__c}"           id="tipoelemento"/>
+        <apex:inputHidden value="{!sedeImpianto.CittaWS__c}"                 id="cittaws"/>
+        <apex:inputHidden value="{!sedeImpianto.IndirizzoWS__c}"             id="indirizzows"/>
+        <apex:inputHidden value="{!sedeImpianto.CivicoWS__c}"                id="civicows"/>
+        <apex:inputHidden value="{!sedeImpianto.Provincia__c}"               id="provincia"/>
+        <apex:inputHidden value="{!sedeImpianto.Ricalcola_Sede_Critica__c}"  id="ricsedecritica"/>
+        <!--  END NEW  -->
+
+    </apex:outputPanel>
+
+    </apex:pageblock>
+    <apex:outputPanel rendered="{!showmap}">
+    <c:MapComponent latitude="{!SedeImpianto.LatitudineGradi__c}" longitude="{!SedeImpianto.LongitudineGradi__c}" />
+   </apex:outputPanel>
+    </apex:form>
+</apex:page>

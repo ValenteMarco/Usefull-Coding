@@ -1,0 +1,20 @@
+{!REQUIRESCRIPT("/soap/ajax/16.0/connection.js")} 
+
+//verifico nelle 3 righe seguenti che l'utente in esecuzione sia il titolare dell'opportunità, altrimenti la creazione fallisce 
+
+var UtenteId ='{!User.Id}'; 
+//var ExistingOwner = '{!Opportunity.OwnerId}'; 
+var faseOpp='{!Opportunity.StageName}'; 
+var valoreAmmontareProgetti='{!Opportunity.Controllo_ammontare_progetti__c}'; 
+if ((faseOpp != 'Annullata')&& (valoreAmmontareProgetti==1) ) { 
+
+
+
+window.open("https://na1.salesforce.com/a06/e?Name={!Opportunity.Name}&00N30000007u0Se={!Opportunity.Ammontare_totale_numero__c}&CF00N30000007tPWQ={!Opportunity.Account}&CF00N30000007tPWQ_lkid={!Opportunity.AccountId}&CF00N30000007tRce={!Opportunity.Name}&CF00N30000007tRce_lkid={!Opportunity.Id}&CF00N30000007tRcP={!Opportunity.Cliente_finale__c}&CF00N30000007tRcP_lkid={!Opportunity.Cliente_finaleId__c}&retURL=/{!Progetto__c.Id}&cancelURL=/{!Opportunity.Id}"); 
+
+
+}
+
+
+--------------------------------------
+link utile: http://raydehler.com/cloud/clod/salesforce-url-hacking-to-prepopulate-fields-on-a-standard-page-layout.html

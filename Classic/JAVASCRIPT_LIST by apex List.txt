@@ -1,0 +1,8 @@
+   <script> 
+         var requests = []; 
+    </script> 
+    <apex:repeat value="{!privacyRequests}" var="request"> 
+        <script> 
+            requests.push('{!request}'); 
+        </script> 
+    </apex:repeat>  

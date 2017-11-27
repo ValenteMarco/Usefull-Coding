@@ -1,0 +1,1158 @@
+/*
+  * @author     Mariateresa Mollica (m.mollica@bit2win.com)
+  * @since      Oct 05, 2016
+  * @desc       Controller Class for ITA_IFM_VFP059_AM_Cart;
+  * @history    Oct 05, 2016 – Mariateresa Mollica – Class creation 
+*/
+global with sharing class ITA_IFM_VFC059_AM_Cart    
+{
+	global static String catalogId {get;set;}
+	global static String catalogName {get;set;} 
+	global static List<NE__Catalog__c> catalogList {get;set;}
+	global static List<NE__Catalog_Category__c> categoryList {get;set;} 
+	global static List<NE__Catalog_Item__c> servicesList {get;set;} 
+	global static List<String> productNameList {get;set;} 
+	global static List<NE__Catalog_Item__c> productVetrina {get;set;}
+	global static Map<String, Set<String>> familyNameList {get;set;}
+	global List<NE__Catalog_Item__c> rootList {get;set;} 
+	public String quoteIdCreated {get;set;}
+	global String ordId {get;set;} 
+
+	global ITA_IFM_VFC059_AM_Cart()
+	{
+		catalogList = [SELECT Id, Name, NE__Active__c FROM NE__Catalog__c WHERE NE__Active__c = true];  
+		catalogId = catalogList.get(0).Id;
+		catalogName = catalogList.get(0).Name;
+		ordId = ApexPages.currentPage().getParameters().get('ordId'); 
+	}  
+
+	/*--------------------------------------*/
+	/*           GET CATEGORIES             */
+	/*--------------------------------------*/
+	/*
+	*   @name       getCategories
+	*   @author     Mariateresa Mollica (m.mollica@bit2win.com)
+	*   @desc       Method to retrieve specific categories of active catalog
+	*   @param      String accountType
+	*   @return     List<NE__Catalog_Category__c> 
+	*
+	/*--------------------------------------*/
+	@RemoteAction  
+	global static List<NE__Catalog_Category__c> getCategories(String accountType)
+	{    
+		catalogList = [SELECT Id, Name, NE__Active__c FROM NE__Catalog__c WHERE NE__Active__c = true]; 
+		catalogId = catalogList.get(0).Id; 
+
+		String categoryToSearch = '';
+
+		if(accountType == ITA_IFM_AM_Constants.BUS)
+		{ 
+			categoryToSearch = '%'+ITA_IFM_AM_Constants.BUS+'%'; 
+			categoryList = [SELECT Id,Name FROM NE__Catalog_Category__c WHERE Name LIKE:categoryToSearch ];
+			System.debug('+++ categorylist: '+categoryList);
+		}
+		else if(accountType == ITA_IFM_AM_Constants.RES)
+		{
+			categoryToSearch = '%'+ITA_IFM_AM_Constants.RES+'%'; 
+			categoryList = [SELECT Id,Name FROM NE__Catalog_Category__c WHERE Name LIKE:categoryToSearch ];
+			System.debug('+++ categorylist: '+categoryList);
+		}
+		else if(accountType == ITA_IFM_AM_Constants.SERVIZI)
+		{
+			categoryToSearch = '%Servizi%'; 
+			categoryList = [SELECT Id,Name FROM NE__Catalog_Category__c WHERE Name LIKE:categoryToSearch ];
+			System.debug('+++ categorylist: '+categoryList);
+		}
+		else if(accountType == ITA_IFM_AM_Constants.BENI)
+		{
+			categoryToSearch = '%Beni%'; 
+			categoryList = [SELECT Id,Name FROM NE__Catalog_Category__c WHERE Name LIKE:categoryToSearch ];
+			System.debug('+++ categorylist: '+categoryList);
+		}
+		return categoryList;
+	} 
+	
+	/*--------------------------------------*/
+	/*           GET ALL PRODUCTS           */
+	/*--------------------------------------*/
+	/*
+	*   @name       getAllProduct
+	*   @author     Mariateresa Mollica (m.mollica@bit2win.com)
+	*   @desc       Method to retrieve all products of active catalog
+	*   @param      String ordId
+	*   @return     List<NE__Catalog_Item__c> 
+	*
+	/*--------------------------------------*/
+	@RemoteAction
+	global static List<NE__Catalog_Item__c> getAllProduct(String ordId)
+	{
+		catalogList = [SELECT Id, Name, NE__Active__c FROM NE__Catalog__c WHERE NE__Active__c = true];
+		catalogId = catalogList.get(0).Id; 
+
+		NE__Order__c order =[SELECT Id, NE__Order_date__c FROM NE__Order__c WHERE Id =: ordId ]; 
+		DateTime orderDate = order.NE__Order_date__c; 
+		System.debug('*** ORDER DATE : '+orderDate);
+
+		List<String> listOfCategory = new List<String>{ 
+															ITA_IFM_AM_Constants.ELERES,
+															ITA_IFM_AM_Constants.ELEBUS,
+															ITA_IFM_AM_Constants.GASRES,
+															ITA_IFM_AM_Constants.GASBUS,  
+															ITA_IFM_AM_Constants.SERVASSICURATIVI,
+															ITA_IFM_AM_Constants.SERVMANUTENTIVI,
+															ITA_IFM_AM_Constants.BENI 
+														};
+
+		List<NE__Catalog_Item__c> productList = new List<NE__Catalog_Item__c>();
+		List<NE__Catalog_Item__c> listtemp = [ 
+												SELECT Id, 
+												Name,
+												NE__Catalog_Id__c,
+												NE__Root_Catalog_Item__c, 
+												NE__Catalog_Category_Name__c,
+												NE__Catalog_Category_name__r.Name, 
+												NE__Engine_Code__c,
+												NE__ProductId__c, 
+												NE__Product_Name__c,
+												NE__ProductId__r.Name, 
+												NE__ProductId__r.ITA_IFM_Commodity__c, 
+												NE__ProductId__r.ITA_IFM_Eligibility__c,
+												NE__ProductId__r.NE__engine_code__c,
+												NE__ProductId__r.ITA_IFM_Product_Typology__c,
+												NE__BaseRecurringCharge__c, 
+												NE__Base_OneTime_Fee__c,
+												NE__Max_Qty__c,
+												NE__Min_Qty__c,
+												NE__StartDateString__c, 
+												NE__EndDateString__c,
+												NE__Start_Date__c, 
+												NE__End_Date__c, 
+												NE__Sequence__c, 
+												NE__Recurring_Charge_Frequency__c, 
+												NE__Active__c,
+												NE__Visible__c,
+												NE__Item_Header__c, 
+												NE__OneTime_Fee_Code__c, 
+												NE__Configuration_Type__c,
+												ITA_IFM_Delivery_Type__c,
+												ITA_IFM_AM_Vetrina__c
+												FROM NE__Catalog_Item__c WHERE NE__Catalog_Id__c =: catalogId 
+												AND NE__Type__c='Product' 
+												AND NE__Start_Date__c <=: orderDate  
+												AND (NE__End_Date__c >=: orderDate OR NE__End_Date__c =NULL)
+												AND NE__Catalog_Category_name__r.name IN: listOfCategory
+												ORDER BY ITA_IFM_AM_Vetrina__c DESC
+											];
+
+		//Retrieve channel from user 
+		String userId 			= UserInfo.getUserId(); 
+		String userChannelName  = '';
+		List<User> userList = [SELECT ITA_IFM_ChannelCode__c,ITA_IFM_Channel__c,Name FROM User WHERE id=:userId LIMIT 1];
+		if (userList!=null && userList.size()>0)
+		{
+			String userChannelId = userList.get(0).ITA_IFM_Channel__c;
+			List<ITA_IFM_Channel__c> channelList = [SELECT Id,ITA_IFM_ChannelCode__c,ITA_IFM_Name__c,Name FROM ITA_IFM_Channel__c WHERE id=:userChannelId  LIMIT 1];
+			if(channelList!=null && channelList.size()>0)
+			{
+				System.debug('***User channel name= '+ channelList.get(0).ITA_IFM_Name__c); 
+				userChannelName = channelList.get(0).ITA_IFM_Name__c;
+			}
+		} 
+
+		System.debug('***listTemp.size' +listtemp.size());                                  
+		 
+		String longTextAreaFields = '';  
+		for(NE__Catalog_Item__c p : listtemp)
+		{  
+			longTextAreaFields =  p.NE__ProductId__r.ITA_IFM_Eligibility__c; //String for elegibility fields(LongTextArea) 
+			if( longTextAreaFields != null && longTextAreaFields.length() > 0 )
+			{  
+				if((userChannelName!=null&&userChannelName!='') && longTextAreaFields.indexOf(ITA_IFM_AM_Constants.CHANNEL+userChannelName) > 0 )
+				{ 
+					productList.add(p); 
+				}
+				else if(userChannelName == 'Punti Enel' && longTextAreaFields.indexOf(ITA_IFM_AM_Constants.CHANNEL+'Punto Enel') > 0)
+				{
+					productList.add(p); 
+				} 
+			}
+			else if( longTextAreaFields != null && longTextAreaFields.length() == 0 )
+			{ 
+				System.debug('********* lunghezza zero ***********    '+longTextAreaFields.length() ); 
+			}   
+		} 
+		System.debug('***productList '+productList.size());
+		return productList;                 
+	}  
+
+	/*--------------------------------------*/
+	/*          GET PRODUCT DETAIL          */
+	/*--------------------------------------*/
+	/*
+	*   @name       getProductDetail
+	*   @author     Mariateresa Mollica (m.mollica@bit2win.com)
+	*   @desc       Method to retrieve the template for every product in the catalog
+	*   @param      String catalogItemID
+	*   @return     String
+	*
+	/*--------------------------------------*/
+	@RemoteAction
+	global static String getProductDetail(String catalogItemID) 
+	{
+		System.debug('**** getProductDetail *** catalogItemID ****'+catalogItemID);
+		Date todayDate = Date.today();  
+		List<B2WExtCat__external_catalog_association__c> ex_catAssoc = new List<B2WExtCat__external_catalog_association__c>();
+		ex_catAssoc = [
+							SELECT name,id, B2WExtCat__Commercial_Catalog_Item__c,
+							B2WExtCat__Commercial_Product_Name__c, 
+							B2WExtCat__Start_Date__c,
+							B2WExtCat__External_Catalog_Item__r.B2WExtCat__start_Date__c,
+							B2WExtCat__end_Date__c,
+							B2WExtCat__External_Catalog_Item__r.B2WExtCat__end_Date__c,
+							B2WExtCat__Priority__c,
+							B2WExtCat__External_Catalog_Item__r.ita_ifm_monthly_calc__c,
+							ITA_IFM_Commodity__c 
+							FROM  B2WExtCat__external_catalog_association__c 
+							WHERE 
+							B2WExtCat__Start_Date__c <=:todayDate AND B2WExtCat__end_Date__c >=:todayDate
+							AND B2WExtCat__Commercial_Catalog_Item__c =:catalogItemID
+							AND B2WExtCat__External_Catalog_Item__r.ita_ifm_monthly_calc__c != null
+							ORDER BY B2WExtCat__Priority__c  
+					];   
+		String exCatAssId = '';     
+		String str = '';
+		System.debug('*** external catalg association list size = '+ex_catAssoc.size());    
+		if( ex_catAssoc.size() >= 1 )
+		{
+			exCatAssId = ex_catAssoc.get(0).id;  
+			String process = 'APP_MOBILE';
+			String phase = 'SCHEDA PRODOTTO';
+			String channel = '';
+			Id objectId = exCatAssId;
+			Date inputDate = null;
+			str = ITA_IFM_UtilScript.getScript( process, phase, channel, objectId, inputDate);
+		} 
+		else 
+		{
+			System.debug('*** lista di external catalog association VUOTA ***');
+			str = 'NO EXTERNAL CATALOG ASSOCIATION'; 
+		} 
+		return str; 
+	}  
+
+	/*--------------------------------------*/
+	/*       RETRIEVE FAMILY NOY HIDDEN     */
+	/*--------------------------------------*/
+	/*
+	*   @name       retrieveFamilyNotHidden
+	*   @author     Mariateresa Mollica (m.mollica@bit2win.com)
+	*   @desc       Method to retrieve families not hidden for each commercial product
+	*   @param      String catalogItemId
+	*   @return     List<NE__ProductFamily__c
+	*
+	/*--------------------------------------*/
+	@RemoteAction
+	global static List<NE__ProductFamily__c> retrieveFamilyNotHidden(String catalogItemId)
+	{
+		List<NE__Catalog_Item__c> listOfCatItem = [SELECT ID, NE__ProductId__c FROM NE__Catalog_Item__c WHERE ID=:catalogItemId];
+		String prodId = listOfCatItem.get(0).NE__ProductId__c;
+		List<NE__ProductFamily__c> prodFamList = [
+													SELECT NE__FamilyId__c,NE__FamilyId__r.NE__Hidden__c ,NE__FamilyId__r.Name,NE__ProdId__c 
+													FROM NE__ProductFamily__c WHERE NE__ProdId__c=:prodId AND NE__FamilyId__r.NE__Hidden__c = false
+												]; 
+		return prodFamList;           
+	} 
+
+	/*--------------------------------------*/
+	/*               GET FAMILIES           */
+	/*--------------------------------------*/
+	/*
+	*   @name       getFamilies
+	*   @author     Mariateresa Mollica (m.mollica@bit2win.com)
+	*   @desc       Method to retrieve families  
+	*   @param      String catalogCategory
+	*   @return     Map<String, Set<String>>
+	*
+	/*--------------------------------------*/
+	@RemoteAction
+	global static Map<String, Set<String>> getFamilies(String catalogCategory)
+	{
+		System.debug('@@@category: '+catalogCategory);
+		List<NE__Family__c> familyList = [
+											SELECT ITA_IFM_Category__c,ITA_IFM_Label__c,ITA_IFM_Type__c,Name 
+											FROM NE__Family__c 
+											WHERE ITA_IFM_Category__c ='Rules' 
+											AND ITA_IFM_Type__c != NULL
+											 
+										 ];
+		
+	   
+		familyNameList = new Map<String, Set<String>>();
+		Set<String> valueList = new Set<String>();
+		for(Integer i = 0; i<familyList.size(); i++) 
+		{
+			ITA_IFM_GetFilters__c myCS = ITA_IFM_GetFilters__c.getValues(familyList.get(i).ITA_IFM_Type__c);   
+			if( i!=0 )
+			{
+				if( familyList.get(i).ITA_IFM_Type__c != familyList.get(i-1).ITA_IFM_Type__c && valueList.size()>0 )
+					valueList = new Set<String>();              
+			}   
+			if( myCS != null && familyList.get(i).ITA_IFM_Type__c != null)
+			{ 
+				if( catalogCategory.contains(myCS.ITA_IFM_FilterType__c))
+				{       
+					valueList.add(familyList.get(i).ITA_IFM_Label__c); 
+					familyNameList.put(familyList.get(i).ITA_IFM_Type__c, valueList);       
+				}               
+				else if( myCS.ITA_IFM_FilterType__c == ITA_IFM_AM_Constants.DUAL) 
+				{   
+					valueList.add(familyList.get(i).ITA_IFM_Label__c);    
+					familyNameList.put(familyList.get(i).ITA_IFM_Type__c, valueList);                                                   
+				}                 
+			} 
+		}   
+		return familyNameList;
+	} 
+	
+	/*--------------------------------------*/
+	/*               GET FAMILIES           */
+	/*--------------------------------------*/
+	/*
+	*   @name       getFamilies
+	*   @author     Mariateresa Mollica (m.mollica@bit2win.com)
+	*   @desc       Method to retrieve families  
+	*   @param      String catalogItemID
+	*   @return     List<NE__Catalog_Item__c>
+	/*--------------------------------------*/
+	@RemoteAction
+	global static List<NE__Catalog_Item__c> getServices(String catalogItemID)
+	{
+		List<NE__Catalog_Item__c> rootProd      = [ 
+														SELECT Id FROM NE__Catalog_Item__c WHERE NE__Parent_Catalog_Item__c  =: catalogItemID AND NE__Type__c = 'Root'
+													];
+												
+		String rootId = rootProd.get(0).Id;
+		
+		List<NE__Catalog_Item__c> categoryProd  = [     
+														SELECT Id, NE__ProductId__r.Name, NE__Type__c, NE__Product_Category_Name__c,NE__Parent_Catalog_Item__c,NE__Root_Catalog_Item__c
+														FROM NE__Catalog_Item__c
+														WHERE NE__Product_Category_Name__c = 'VAS' AND NE__Parent_Catalog_Item__c =:rootId
+		
+													];
+		String categoryId = categoryProd.get(0).Id; 
+		
+		servicesList = [
+							SELECT Id, NE__ProductId__r.Name, NE__Parent_Catalog_Item__c, NE__Type__c
+							FROM NE__Catalog_Item__c
+							WHERE NE__Parent_Catalog_Item__c=: categoryId AND NE__Type__c = 'Child-Product'
+						];       
+							 
+		return servicesList;
+	} 
+	
+	/*--------------------------------------*/
+	/*             FIRST RETRIEVE           */
+	/*--------------------------------------*/
+	/*
+	*   @name       firstRetrieve
+	*   @author     Mariateresa Mollica (m.mollica@bit2win.com)
+	*   @desc       Method to retrieve all the product from a specific catalog category
+	*   @param      String catalog
+	*   @param      String category
+	*   @param      String lastContextString 
+	*   @return     NE.CartService.Output
+	*
+	/*--------------------------------------*/ 
+	@RemoteAction
+	global static  NE.CartService.Output firstRetrieve(String catalog, String category, String lastContextString) 
+	{    
+		NE.RetrieveItemsService.Input   input               =   new NE.RetrieveItemsService.Input();
+		NE.RetrieveItemsService.Output  output              =   new NE.RetrieveItemsService.Output();
+		NE.CartService.Output           outputContext       =   new NE.CartService.Output(); 
+ 
+		input.catalogId = catalog; 
+		input.categoryId = category; 
+		if(lastContextString != null && lastContextString != '')
+		{
+			outputContext      =   (NE.CartService.Output)JSON.deserialize(lastContextString,Type.forName('NE.CartService.Output'));
+			input.cart = outputContext.cart;
+		}
+		output = NE.CartActions.retrieveItems(input); 
+
+		return (NE.CartService.Output)output;
+	}
+
+	/*--------------------------------------*/
+	/*            RETRIEVE COMPLEX          */
+	/*--------------------------------------*/
+	/*
+	*   @name       retrieveComplex
+	*   @author     Mariateresa Mollica (m.mollica@bit2win.com)
+	*   @desc       Method to retrieve the structure of complex item
+	*   @param      String ordId
+	*   @param      String catId
+	*   @param      String categId
+	*   @param      String outputContextString
+	*   @param      String currentItemCode
+	*   @return     NE.CartService.Output
+	*
+	/*--------------------------------------*/ 
+	@RemoteAction
+	global static NE.CartService.Output retrieveComplex(String ordId, String catId, String categId, String outputContextString, String currentItemCode) 
+	{ 
+		//parentvid , rootvid me li passo di parametri al metodo
+		System.debug('*** retrieveComplex ***');
+		System.debug('*** current item code    '+currentItemCode);
+		System.debug('*** catId ***        	   '+catId);
+		System.debug('*** categoryId ***       '+categId);
+		String itemCode = '';
+
+
+		NE.CartService.Output outputContext;   
+		outputContext   =   (NE.CartService.Output)JSON.deserialize(outputContextString, Type.forName('NE.CartService.Output'));
+
+		NE.RetrieveItemsService.Input   input   =   new NE.RetrieveItemsService.Input();
+		NE.CartService.Output           output  =    new NE.CartService.Output();
+		
+		// devo passare il configuration, passare id! senza query sarebbe meglio! è importante creare il nodo 
+		if(outputContext.configuration != null)
+		{ 
+			 System.debug('##### OUTPUT CONFIGURATION ###');
+			 System.debug(outputContext.configuration);
+			 input.configuration = outputContext.configuration;
+		}
+		else
+		{
+			NE__Order__c configuration = new NE__Order__c();
+			configuration = [SELECT Id, NE__AccountId__c, NE__BillAccId__c, NE__ServAccId__c FROM NE__Order__c WHERE Id =:ordId];
+			input.configuration = configuration;
+		}   
+
+		for(NE.CartService.Item item :outputContext.cart)
+		{
+			System.debug('***item***'); 
+			System.debug(item.fields); //ricontrollo che ho tutti i campi dell'inizio
+			System.debug(item.fields.get('itemCode'));       
+			itemCode = item.fields.get('itemCode');
+		} 
+
+		System.debug('ID ITEMCODE' +itemCode); 
+		
+		
+		input.cart              = outputContext.cart;
+		input.catalogId         = catId; 
+		input.categoryId        = categId;      //se ho problemi commentare questa riga 
+		//input.complexProductId  = itemCode;     //root = vid del prodotto complesso che sto configurando (rootvid sempre!)
+		
+		input.complexProductId  = currentItemCode;
+		System.debug('**** input ****');
+		System.debug(input);
+		output = NE.CartActions.retrieveItems(input);
+		System.debug('**** output retrieveItemFromCart ****');  
+		System.debug(output);  
+		return (NE.CartService.Output)output;
+	}
+	
+	/*--------------------------------------*/
+	/*                 UPSERT               */
+	/*--------------------------------------*/
+	/*
+	*   @name       newUpsert
+	*   @author     Mariateresa Mollica (m.mollica@bit2win.com)
+	*   @desc       Method add a complex product
+	*   @param      String catalogItemId
+	*   @param      String ordId
+	*   @param      String lastContextString
+	*   @param      String catId
+	*   @param      String categId
+	*   @return     NE.CartService.Output
+	*
+	/*--------------------------------------*/  
+	@RemoteAction 
+	global static NE.CartService.Output newUpsert(String catalogItemId, String ordId, String lastContextString, String catId, String categId)
+	{  
+		NE.UpsertItemsService.Input     input               =   new NE.UpsertItemsService.Input();
+		NE.UpsertItemsService.Output    output              =   new NE.UpsertItemsService.Output();  
+		List<NE.CartService.Item>       listOfItemsToAdd    =   new List<NE.CartService.Item>();   
+		NE.CartService.Item             itemToAdd           = new NE.CartService.Item();
+
+		NE__Order__c configuration = new NE__Order__c();
+		configuration = [SELECT Id, NE__Order_date__c , NE__AccountId__c, NE__BillAccId__c, NE__ServAccId__c FROM NE__Order__c WHERE Id =:ordId];  
+		 
+		NE.CartService.Output           outputContext       =   new NE.CartService.Output(); 
+		outputContext      =   (NE.CartService.Output)JSON.deserialize(lastContextString,Type.forName('NE.CartService.Output'));
+
+		System.debug('###############################  outputContext  ###################################');
+		System.debug(outputContext.listOfItems); 
+		for(Integer x = 0; x<outputContext.listOfItems.size(); x++)
+		{ 
+			if(outputContext.listOfItems.get(x).fields.get('catalogitemid') == catalogItemId)
+			{
+				System.debug('*** trovato prodotto *** '+ outputContext.listOfItems.get(x).fields.get('productname'));
+				System.debug('*** ITEM CODE *** '       + outputContext.listOfItems.get(x).fields.get('itemCode'));
+				itemToAdd.fields.put('itemCode', outputContext.listOfItems.get(x).fields.get('itemCode'));
+				//itemToAdd.fields.put('qty',         outputContext.listOfItems.get(x).fields.get('qty')); 
+				//MT modified 11 gennaio 2017
+				itemToAdd.fields.put('qty','1'); 
+				String configurationType = outputContext.listOfItems.get(x).fields.get('configurationType'); 
+
+				if(configurationType == ITA_IFM_AM_Constants.AUTOCONFIGURATION)
+				{
+					itemToAdd.fields.put('addAndConfigure', 'true'); 
+				} 
+				listOfItemsToAdd.add(itemToAdd); 
+			}
+		} 
+
+		input.categoryid        =   null; 
+		input.catalogId         =   catId;
+		input.configuration     =   configuration; 
+		input.itemsToAdd        =   listOfItemsToAdd;
+		input.listOfItems       =   outputContext.listOfItems; 
+		input.cart              =   outputContext.cart; 
+ 
+		output = NE.CartActions.upsertItems(input);   
+		return (NE.CartService.Output)output;
+	}
+
+	/*--------------------------------------*/
+	/*       UPDATE CONFIGURATION           */
+	/*--------------------------------------*/
+	/*
+	*   @name       newUpsert
+	*   @author     Mariateresa Mollica (m.mollica@bit2win.com)
+	*   @desc       Method to update the configuration, father or child attributes
+	*   @param      String updatedProd
+	*   @param      String catalog
+	*   @param      Map<String, String> mapOfAttr
+	*   @param      String vid
+	*   @param      String parentvid
+	*   @return     NE.CartService.Output
+	*
+	/*--------------------------------------*/  
+	@RemoteAction
+	global static NE.CartService.Output updateConfiguration(String updatedProd, String catalog, Map<String, String> mapOfAttr, String vid, String parentvid)
+	{
+		NE.UpsertItemsService.Input     input               =   new NE.UpsertItemsService.Input();
+		NE.UpsertItemsService.Output    output              =   new NE.UpsertItemsService.Output(); 
+		List<NE.CartService.Item>       listOfItemsToAdd    =   new List<NE.CartService.Item>();  
+		NE.CartService.Item             itemToAdd           =   new NE.CartService.Item();
+		List<NE.CartService.Item>       listOfItems         =   new List<NE.CartService.Item>();   
+		NE.CartService.Output           outputContext       =   new NE.CartService.Output(); 
+		List<NE.CartService.Attribute>  listOfAttribute = new List<NE.CartService.Attribute>();
+		NE.CartService.Attribute attribute = new NE.CartService.Attribute();
+		outputContext      =   (NE.CartService.Output)JSON.deserialize(updatedProd,Type.forName('NE.CartService.Output')); 
+		
+		System.debug('***PARAMETRO Prodotto Padre    (vid): '+parentvid);
+		System.debug('***PARAMETRO Prodotto Corrente (vid): '+vid); 
+		 
+		Set <String> attrKeySet = new Set <String>();
+		attrKeySet = mapOfAttr.keySet();
+		String complexProdId = '';
+		String parentProdId  = '';
+
+		String pippo = '';
+		for(Integer x = 0; x<outputContext.cart.size(); x++)
+		{			 
+			System.debug('***FIEDS OF CART: '+outputContext.cart.get(x).fields);
+			if(parentVid == outputContext.cart.get(x).fields.get('rootvid'))
+			{
+				System.debug('***Rootvid: '+outputContext.cart.get(x).fields.get('rootvid'));
+				System.debug('***itemcode: '+outputContext.cart.get(x).fields.get('itemCode'));
+				System.debug('***vid: '+outputContext.cart.get(x).fields.get('vid'));
+				pippo = outputContext.cart.get(x).fields.get('rootvid');
+			}
+		} 
+
+		for(NE.CartService.Item cartItem : outputContext.cart)
+		{ 
+			
+			System.debug('++++++ it');
+			System.debug(cartItem);
+			System.debug(cartItem.fields);
+			System.debug('***vid'+cartItem.fields.get('vid'));
+			System.debug('***PARAMETRO VID: '+vid);
+
+			if( cartItem.fields.get('vid') == vid )
+			{
+				System.debug('##### STO CONFIGURANDO IL PADRE #####');
+				itemToAdd = cartItem;
+				System.debug('+++vid ok +++'); 
+				System.debug(itemToAdd.listOfAttributes);
+				for( NE.CartService.Attribute attr : itemToAdd.listOfAttributes)
+				{
+					String attrId   = attr.fields.get('idattr');
+					if(attrKeySet.contains(attrId)) 
+					{
+						System.debug('++++value+++++');
+						String value = mapOfAttr.get(attrId);
+						System.debug(value);
+						attr.fields.put('value', value);                   
+					}
+				}
+
+				if(cartItem.fields.get('parent') == '' || cartItem.fields.get('parent') == null)
+				{
+					System.debug('*** STO CONFIGURANDO IL PADRE ***');
+					complexProdId = '';
+					parentProdId  = '';
+				}
+			}
+
+			else if( cartItem.childItems.size() >0 )
+			{
+				System.debug('*** lista figli piena ***'); 
+				//itemToAdd = cartItem;
+				for(Integer x = 0; x < cartItem.childItems.size(); x++)
+				{
+					System.debug( '*** nome prodotto: '+cartItem.childItems.get(x).fields.get('productname') );
+					String  itemcode = cartItem.childItems.get(x).fields.get('itemCode');
+					System.debug('***parent: '+cartItem.childItems.get(x).fields.get('parent'));
+					System.debug('***parentvid: '+cartItem.childItems.get(x).fields.get('parentvid'));
+					System.debug('*** itemcode: '+itemcode);
+					System.debug('*** vid: '+vid); 
+					if( vid == itemcode ||  vid.equals(itemcode))
+					{
+						itemToAdd = cartItem.childItems.get(x);//add child
+						System.debug('*** trovato figlio di cui fare update attributi ***');
+						System.debug('##### STO CONFIGURANDO IL FIGLIO #####');
+						complexProdId = pippo;
+						for(Integer y = 0; y < itemToAdd.listOfAttributes.size(); y++)
+						//for(Integer y = 0; y < cartItem.childItems.get(x).listOfAttributes.size(); y++)
+						{
+							//String attrId   = cartItem.childItems.get(x).listOfAttributes.get(y).fields.get('idattr');
+							String attrId   = itemToAdd.listOfAttributes.get(y).fields.get('idattr');
+							if(attrKeySet.contains(attrId)) 
+							{ 
+								String value = mapOfAttr.get(attrId);
+								System.debug(value);  
+								//cartItem.childItems.get(x).listOfAttributes.get(y).fields.put('value', value);  
+								itemToAdd.listOfAttributes.get(y).fields.put('value', value);   
+								parentProdId = parentvid;  
+							}
+						}  
+					}
+				}
+			} 
+		}
+		System.debug('+++ itemToAddElement after update+++');
+		System.debug(itemToAdd.listOfAttributes);
+		System.debug(itemToAdd);
+
+
+		listOfItemsToAdd.add(itemToAdd); 
+
+		System.debug('************* mapOfAttr *************'+catalog);
+		System.debug(mapOfAttr);
+		System.debug('list of items size = '+outputContext.listOfItems.size());  
+		System.debug(outputContext.listOfItems);  
+
+		input.catalogId         =   catalog; 
+		input.listOfItems       =   outputContext.listOfItems;
+		input.cart              =   outputContext.cart;
+		input.itemsToAdd        =   listOfItemsToAdd;   
+		input.complexProductId  =   complexProdId;
+		input.parentProductId   =   parentProdId; 
+
+		System.debug('### input:');
+		System.debug(complexProdId);
+		System.debug(parentProdId);
+		System.debug(input);
+
+		output = NE.CartActions.upsertItems(input);   
+		return (NE.CartService.Output)output;
+	} 
+
+	/*--------------------------------------*/
+	/*          UPSERT CHILD ITEMS          */
+	/*--------------------------------------*/
+	/*
+	*   @name       upsertChildItems
+	*   @author     Mariateresa Mollica (m.mollica@bit2win.com)
+	*   @desc       Method to update the configuration, father or child attributes
+	*   @param      String catId
+	*   @param      String categId
+	*   @param      String idCatalogItem
+	*   @param      String outputcontexString
+	*   @param      String qty
+	*   @param      String rootVid
+	*   @param      String parentVid
+	*   @return     NE.CartService.Output
+	*
+	/*--------------------------------------*/  
+	@RemoteAction
+	global static NE.CartService.Output upsertChildItems(String catId, String categId, String idCatalogItem, String outputcontexString, String qty, String rootVid, String parentVid)
+	{
+		NE.CartService.Output outputContext;   
+		outputContext   =   (NE.CartService.Output) JSON.deserialize(outputcontexString, Type.forName('NE.CartService.Output')); 
+		 
+		List<NE.CartService.Item> itemToAdd = new List<NE.CartService.Item>();   
+		//for(NE.CartService.Item item :outputContext.listOfItems)
+		//{
+		   
+		//   NE.CartService.Item itemToAddElement = new NE.CartService.Item(); 
+
+		//   for(String key:item.fields.keySet())
+		//   itemToAddElement.fields.put(key,item.fields.get(key)); 
+		//   listOfItems.add(itemToAddElement);
+		//} 
+
+		System.debug('*******************listOfItems size ***************'); 
+		System.debug('###idCatalogItem: '+idCatalogItem);
+		System.debug('###parentVid: '+parentVid);
+
+		System.debug('### output CART ###'); 
+		System.debug(outputContext.cart);
+		String fatherVid = '';
+		String pippo = '';
+
+		for(Integer x = 0; x<outputContext.cart.size(); x++)
+		{
+			 
+			System.debug('***FIEDS OF CART: '+outputContext.cart.get(x).fields);
+			if(parentVid == outputContext.cart.get(x).fields.get('rootvid'))
+			{
+				System.debug('***Rootvid: '+outputContext.cart.get(x).fields.get('rootvid'));
+				System.debug('***itemcode: '+outputContext.cart.get(x).fields.get('itemCode'));
+				System.debug('***vid: '+outputContext.cart.get(x).fields.get('vid'));
+				pippo = outputContext.cart.get(x).fields.get('rootvid');
+			} 
+			//fatherVid = outputContext.cart.get(0).fields.get('vid');
+		}
+
+		System.debug(outputContext.listOfItems.size());
+		for(Integer x = 0; x < outputContext.listOfItems.size();x++)
+		{ 
+			System.debug('###id: '+outputContext.listOfItems[x].fields.get('catalogitemid') );
+			System.debug('###name: '+outputContext.listOfItems[x].fields.get('productname') );
+			if( outputContext.listOfItems[x].fields.get('catalogitemid') == idCatalogItem )
+			{
+				outputContext.listOfItems[x].fields.put('rootvid', pippo); 
+				System.debug('######## TROVATO CHILD ###########');
+				System.debug('######## NOME CHILD: '+outputContext.listOfItems[x].fields.get('productname'));
+				System.debug('######## ITEM CODE OF THE CHILD: '+outputContext.listOfItems[x].fields.get('itemCode')); 
+				System.debug('######## ROOTVID OF THE CHILD: '+outputContext.listOfItems[x].fields.get('rootvid'));
+				
+				 //fatherVid = outputContext.listOfItems[x].fields.get('rootvid');
+				NE.CartService.Item itemToAddElement = new NE.CartService.Item();
+				itemToAddElement.fields.put('itemCode', outputContext.listOfItems[x].fields.get('itemCode'));
+				itemToAddElement.fields.put('qty', qty);
+				itemToAddElement.fields.put('rootvid', pippo);
+				itemToAdd.add(itemToAddElement); 
+				 
+				//For the selected child product set rootvid
+				//rootvid = listOfItems[x].fields.get('rootvid');
+				x = outputContext.listOfItems.size();
+			}
+		}  
+
+
+		NE.UpsertItemsService.Input     input          =   new NE.UpsertItemsService.Input();
+		NE.UpsertItemsService.Output    output         =   new NE.UpsertItemsService.Output();
+
+		input.itemsToAdd        =   itemToAdd;
+		input.listOfItems       =   outputContext.listOfItems; 
+		input.catalogId         =   catId; 
+		input.categoryid        =   null; 
+		input.cart              =   outputContext.cart;
+		input.complexProductId  =   pippo;   // mi serve per mantenere la gerarchia del prodotto
+		input.parentProductId   =   parentVid;
+		system.debug('*** complexProductId ***   '  +input.complexProductId);
+		system.debug('*** parentProductId ***   '  +input.parentProductId);
+		system.debug('*** input ***');
+		system.debug(input);
+		output = NE.CartActions.upsertItems(input);
+		System.debug('*** output***');
+		System.debug(output);   
+		return (NE.CartService.Output)output;
+	}
+
+	/*----------------------------------------------*/
+	/*                 REMOVE ITEMS                 */
+	/*----------------------------------------------*/
+	/*
+	*   @name       checkOutCart
+	*   @author     Mariateresa Mollica (m.mollica@bit2win.com)
+	*   @desc       Method used to remove item from the cart
+	*   @param      String catId
+	*   @param      String idCatalogItem
+	*   @param      String outputContextString
+	*   @return     NE.CartService.Output
+	*
+	/*----------------------------------------------*/
+	@RemoteAction
+	global static NE.CartService.Output removeItems(String catId, String idCatalogItem, String outputContextString)   
+	{
+		NE.CartService.Output outputContext;   
+		
+		NE.RemoveItemsService.Input     input   =   new NE.RemoveItemsService.Input();
+		NE.RemoveItemsService.Output    output  =   new NE.RemoveItemsService.Output();
+  
+		List<NE.CartService.Item> itemToRemoveList = new List<NE.CartService.Item>();  
+		NE.CartService.Item itemToRemove = new NE.CartService.Item(); 
+		outputContext   =   (NE.CartService.Output) JSON.deserialize(outputContextString, Type.forName('NE.CartService.Output'));
+		
+		System.debug('***outputContext***');  
+		System.debug(outputContext);  
+		System.debug(outputContext.cart);
+		for(NE.CartService.Item item :outputContext.cart)
+		{
+			System.debug('***item***'); 
+			System.debug(item); 
+			if(item.fields.get('catalogitemid') == idCatalogItem)
+			{   
+				System.debug('### Removing Father ###');
+				itemToRemove = new NE.CartService.Item();
+				itemToRemove.fields.put('itemCode', item.fields.get('itemCode')); 
+				itemToRemove.fields.put('qty', item.fields.get('qty')); 
+				itemToRemoveList.add(itemToRemove);
+			}
+			else if(item.childItems!=null && item.childItems.size()>0)
+			{
+				for(Integer x = 0; x<item.childItems.size(); x++)
+				{
+					if(item.childItems.get(x).fields.get('catalogitemid') == idCatalogItem )
+					{ 
+						System.debug('### Removing Son = '+item.childItems.get(x).fields.get('productname'));
+						System.debug('### rootvid = '+item.childItems.get(x).fields.get('rootvid'));
+						System.debug('### itemcode = '+item.childItems.get(x).fields.get('itemCode'));
+						System.debug('### itemcode = '+item.childItems.get(x).fields.get('qty'));
+
+						itemToRemove = new NE.CartService.Item();
+						itemToRemove.fields.put('itemCode', item.childItems.get(x).fields.get('itemCode')); 
+						itemToRemove.fields.put('qty', item.childItems.get(x).fields.get('qty')); 
+						itemToRemove.fields.put('rootvid', item.fields.get('rootvid'));  
+						itemToRemoveList.add(itemToRemove);
+						
+						input.complexProductId = item.childItems.get(x).fields.get('rootvid');
+						x = item.childItems.size(); 
+					}
+				}
+			}
+		}
+		 
+		input.cart              =   outputContext.cart;
+		input.listOfItems       =   outputContext.listOfItems;
+		input.catalogId         =   catId; 
+		input.itemsToRemove     =   itemToRemoveList; 
+		System.debug('@@@input');
+		System.debug(input);
+		output    = NE.CartActions.removeItems(input);
+		System.debug('###output'); 
+		System.debug(output);
+		return (NE.CartService.Output)output; 
+	}
+	
+	/*----------------------------------------------*/
+	/*             SAVE CONFIGURATION               */
+	/*----------------------------------------------*/
+	/*
+	*   @name       saveConfiguration
+	*   @author     Mariateresa Mollica (m.mollica@bit2win.com)
+	*   @desc       Method used to save current configuration
+	*   @param      String catId
+	*   @param      String currentProdCategory
+	*   @param      String outputContextString
+	*   @return     NE.CartService.Output
+	*
+	/*----------------------------------------------*/
+	@RemoteAction
+	global static NE.CartService.Output saveConfiguration(String catId, String currentProdCategory, String outputContextString)
+	{
+		NE.CartService.Output outputContext;
+		outputContext   =   (NE.CartService.Output) JSON.deserialize(outputContextString, Type.forName('NE.CartService.Output'));
+
+		NE.RetrieveItemsService.Input  input     =   new NE.RetrieveItemsService.Input(); 
+		NE.RetrieveItemsService.Output output    =   new NE.RetrieveItemsService.Output();
+		if(outputContext.configuration != null)
+		{
+			input.configuration = outputContext.configuration;
+		} 
+
+		input.cart              = outputContext.cart;
+		input.catalogId         = catId; 
+		input.categoryId        = currentProdCategory;    
+		output = NE.CartActions.retrieveItems(input); 
+		return (NE.CartService.Output)output; 
+	}
+
+	/*----------------------------------------------*/
+	/*                 REMOVE ITEMS                 */
+	/*----------------------------------------------*/
+	/*
+	*   @name       abortConfiguration
+	*   @author     Mariateresa Mollica (m.mollica@bit2win.com)
+	*   @desc       Method used to remove item from the cart
+	*   @param      String catId
+	*   @param      String outputContextString
+	*   @return     NE.CartService.Output
+	*
+	/*----------------------------------------------*/
+	@RemoteAction
+	global static NE.CartService.Output abortConfiguration(String catId, String outputContextString)
+	{
+		NE.CartService.Output outputContext;
+		outputContext   =   (NE.CartService.Output) JSON.deserialize(outputContextString, Type.forName('NE.CartService.Output'));
+		NE.RetrieveItemsService.Input  input     =   new NE.RetrieveItemsService.Input(); 
+		NE.RetrieveItemsService.Output output    =   new NE.RetrieveItemsService.Output();
+
+		input.cart              = outputContext.cart;
+		input.catalogId         = catId;  
+		output = NE.CartActions.retrieveItems(input); 
+		return (NE.CartService.Output)output; 
+	}
+
+	/*--------------------------------------*/
+	/*              CLEAR CART              */
+	/*--------------------------------------*/
+	/*
+	*   @name       clearCart
+	*   @author     Mariateresa Mollica (m.mollica@bit2win.com)
+	*   @desc       This method is used to empty the shopping cart and reset the status
+	*   @param      String catId
+	*   @param      String outputContextString
+	*   @return     NE.CartService.Output  
+	*  
+	*/
+	@RemoteAction
+	global static NE.CartService.Output clearCart(String catId, String outputContextString)
+	{
+		NE.CartService.Output outputContext;
+		outputContext   =   (NE.CartService.Output) JSON.deserialize(outputContextString, Type.forName('NE.CartService.Output'));
+		NE.ClearCartService.Input input = new NE.ClearCartService.Input();
+		NE.ClearCartService.Output output = new NE.ClearCartService.Output();
+		input.catalogId = catId;
+		input.cart = outputContext.cart;
+
+		output    = NE.CartActions.clearCart(input);
+		 
+		return (NE.CartService.Output)output; 
+	}
+
+	/*----------------------------------------------*/
+	/*                CHECK OUT CART                */
+	/*----------------------------------------------*/
+	/*
+	*   @name       checkOutCart
+	*   @author     Mariateresa Mollica (m.mollica@bit2win.com)
+	*   @desc       Method used to do the cart check out
+	*   @param      String ordId
+	*   @param      String catalog
+	*   @param      String outputContextString
+	*   @return     NE.CartService.Output
+	/*----------------------------------------------*/
+
+	@RemoteAction
+	global static NE.CartService.Output checkOutCart(String ordId, String catalog, String outputContextString) 
+	{   
+		System.debug('***  CHECK OUT  ***' +catalog); 
+
+		NE__Order__c configuration = new NE__Order__c();
+		configuration = [SELECT Id, NE__AccountId__c, NE__BillAccId__c, NE__ServAccId__c, NE__ConfigurationStatus__c, NE__OptyId__c  FROM NE__Order__c WHERE Id =:ordId];  
+
+		NE.CartService.Output           outputContext   =   new NE.CartService.Output(); 
+		outputContext   =   (NE.CartService.Output) JSON.deserialize(outputContextString, Type.forName('NE.CartService.Output'));
+		
+		NE.CartCheckOutService.Input    input           =   new NE.CartCheckOutService.Input();     
+		
+		if(outputContext.configuration != null)
+		{ 
+			input.configuration = configuration; 
+			if( outputContext.configuration.NE__Recurring_Charge_Total__c != null )
+			    input.configuration.NE__Recurring_Charge_Total__c  = outputContext.configuration.NE__Recurring_Charge_Total__c;
+
+		    if( outputContext.configuration.NE__One_Time_Fee_Total__c != null )
+			    input.configuration.NE__One_Time_Fee_Total__c  = outputContext.configuration.NE__One_Time_Fee_Total__c;
+
+		    if( outputContext.configuration.NE__TotalRecurringFrequency__c != null )
+			    input.configuration.NE__TotalRecurringFrequency__c  = outputContext.configuration.NE__TotalRecurringFrequency__c;
+			
+			if( outputContext.configuration.NE__ConfigurationStatus__c != null)
+			{
+	    		input.configuration.NE__ConfigurationStatus__c  = outputContext.configuration.NE__ConfigurationStatus__c;
+	    		System.debug('###configuration status: '+outputContext.configuration.NE__ConfigurationStatus__c);
+	    	}
+    	}
+
+		input.cart = outputContext.cart; 
+		input.catalogId =   catalog;
+		input.configuration.NE__CatalogId__c = catalog;
+		input.listOfItems =   outputContext.listOfItems;
+		System.debug('***input: '+input);
+
+		System.debug('@@@input');
+		System.debug(input);
+		NE.CartService.Output output           =   (NE.CartService.Output)NE.CartActions.cartCheckOut(input); 
+		System.debug('###output'); 
+		System.debug(output);
+		
+		return  output;
+	} 
+
+	
+	@RemoteAction 
+	global static List<NE__OrderItem__c> setRecordTtpeOrderItem(String orderId)
+	{
+		NE__Order__c configuration = [SELECT Id, name FROM NE__order__c WHERE id=:orderId];
+		List<NE__OrderItem__c> ordItemList = new List<NE__OrderItem__c>();
+		ordItemList = [SELECT Id, RecordTypeId, RecordType.DeveloperName, NE__CatalogItem__c, NE__CatalogItem__r.RecordTypeId, NE__CatalogItem__r.RecordType.DeveloperName 
+						FROM NE__OrderItem__c WHERE NE__OrderId__c =:orderId];
+
+		List<RecordType>  oiRTlist = [SELECT Id, SobjectType, DeveloperName FROM RecordType WHERE SobjectType = 'NE__OrderItem__c' ];
+		
+		for(NE__OrderItem__c oi : ordItemList)
+		{
+			String catalogItemRT = oi.NE__CatalogItem__r.RecordType.DeveloperName;
+			System.debug('#####order item record type : '+catalogItemRT);
+			for(RecordType rt : oiRTlist)
+			{
+				if(catalogItemRT == rt.DeveloperName)
+					oi.RecordTypeId = rt.Id;
+			}
+		}
+		update ordItemList;
+		return ordItemList;
+	}
+
+	/*----------------------------------------------*/
+	/*          GET RECORD TYPE QUOTE         */
+	/*----------------------------------------------*/
+	/*
+	*   @name       getRTQuote
+	*   @author     Mariateresa Mollica (m.mollica@bit2win.com)
+	*   @desc       Method used to get Record Type of Quote
+	*   @param      String ordId 
+	*   @return     String
+	/*----------------------------------------------*/
+	@RemoteAction
+	global static String getRTQuote(String ordId)
+	{
+		String quoteRT = ITA_IFM_AM_Util.getRTQuote(ordId); 
+		System.debug('***quoteRT: '+quoteRT);
+		return quoteRT;    
+	}
+	
+	/*----------------------------------------------*/
+	/*               CREATE NEW QUOTE               */
+	/*----------------------------------------------*/
+	/*
+	*   @name       createNewQuote
+	*   @author     Mariateresa Mollica (m.mollica@bit2win.com)
+	*   @desc       Method used to create a new quote
+	*   @param      String ordId 
+	*   @param 		String quoteRecordType
+	*   @param 		String catalogCategory
+	*   @return     String
+	/*----------------------------------------------*/
+	@RemoteAction
+	global static String createNewQuote(String ordId, String quoteRecordType, String catalogCategory)
+	{
+		System.debug('*** ordId: '+ordId);
+		System.debug('*** quoteRecordType: '+quoteRecordType);
+		System.debug('*** catalogCategory: '+catalogCategory);
+
+		String userId           = UserInfo.getUserId(); 
+
+		NE__Quote__c quote = new NE__Quote__c();
+		List<User> userList = [SELECT Id, ITA_IFM_AgentCode__c,ITA_IFM_ChannelCode__c,ITA_IFM_Channel__c,ITA_IFM_SubchannelCode__c,ITA_IFM_Subchannel__c FROM User WHERE Id =:userId];
+		if(userList.size() != 0 && userList != null)
+		{  
+			quote.ITA_IFM_ChannelLK__c              = userList.get(0).ITA_IFM_Channel__c; 
+			//quote.ITA_IFM_SubchannelLK__c             = userList.get(0).ITA_IFM_Subchannel__c; 
+			quote.ITA_IFM_ResponsibleAgentCode__c   = userList.get(0).ITA_IFM_AgentCode__c;
+		}  
+		
+		quote.NE__Orders__c = ordId; 
+		quote.ITA_IFM_SubscriptionType__c = ITA_IFM_AM_Constants.QUOTE_SIGNATUR_MODALITY;
+		quote.ITA_IFM_Sending_Channel__c  = ITA_IFM_AM_Constants.QUOTE_SENDING_CHANNEL_LOCAL_PRINT;
+ 
+		Id rtQuoteId = ITA_IFM_UtilClass.retrieveRecordTypeIdByDeveloperName('NE__Quote__c',quoteRecordType);
+		System.debug('***rtQuoteId***: '+rtQuoteId); 
+		quote.RecordTypeId = rtQuoteId; 
+		//if(quoteRecordType == ITA_IFM_AM_Constants.QUOTE_RTDN_VAS) 
+		//{    
+		//	System.debug('***[VAS]quoteRecordType: '+quoteRecordType+'  ==  '+ITA_IFM_AM_Constants.QUOTE_RT_VAS);
+		//	quote.RecordTypeId = rtQuoteId; 
+		//}
+		//else if (quoteRecordType == ITA_IFM_AM_Constants.PROCESS_TYPE_SWA)
+		//{
+		//	System.debug('***[SWA]quoteRecordType: '+quoteRecordType+'  ==  '+ITA_IFM_AM_Constants.PROCESS_TYPE_SWA);
+		//	quote.RecordTypeId = rtQuoteId; 
+		//} 
+		System.debug('***quote before update***'); 
+		System.debug(quote.RecordTypeId); 
+		insert quote;
+
+		System.debug('***quote after update***'); 
+		System.debug(quote.RecordTypeId); 
+		String quoteId = quote.Id;  
+		NE__Order__c ord = [SELECT Id, NE__Quote__c FROM NE__Order__c WHERE Id =:ordId];
+		ord.NE__Quote__c = quoteId;
+		update ord;
+		System.debug('*** current ord updated ***');
+		System.debug(ord);
+		return quoteId;
+	}
+	
+	/*----------------------------------------------*/
+	/*              REDIRECT TO PAGE                */
+	/*----------------------------------------------*/
+	/*
+	*   @name       redirectToPage
+	*   @author     Mariateresa Mollica (m.mollica@bit2win.com)
+	*   @desc       Method used to redirect to QuoteRedirect --> Customer Data
+	*   @param 	    \\ 
+	*   @return     PageReference
+	/*----------------------------------------------*/
+	global PageReference redirectToPage()
+	{  
+		PageReference page = null;
+		try
+		{
+			String appProcess           =   ITA_IFM_AM_Constants.PROCESS_APPMOBILE_CAP;
+			List<NE__Order__c> configuration = new List<NE__Order__c>();
+
+			if(ordId != null && ordId != '')
+			{
+				configuration   = [SELECT Id,NE__Quote__c,name FROM NE__Order__c where id=:ordId]; 
+			}  
+			
+			List<Event> ev = new List<Event>();
+			ev = [SELECT ITA_IFM_Configuration__c, ITA_IFM_Offer__c FROM Event WHERE ITA_IFM_Configuration__c =:ordId LIMIT 1];
+			if (ev!=null && ev.size()>0)
+			{
+				Event instanceev = new Event();
+				instanceev = ev.get(0);
+				if (configuration.size()>0)
+				{
+					instanceev.ITA_IFM_Offer__c = configuration.get(0).NE__Quote__c;
+					update instanceev;
+				}
+			} 
+			page = new PageReference( ITA_IFM_AM_Constants.REDIRECT_QUOTERED+'p='+appProcess+'&qid='+configuration.get(0).NE__Quote__c+'&OrdId='+configuration.get(0).Id );
+		}
+		catch(Exception e)
+		{
+			System.debug('[ EXCE ] Error in the getDocumentsFromLov method: '+e.getMessage()+ ' at line: '+e.getLineNumber()+' stack trace: '+e.getStackTraceString());
+		}
+		return page;    
+	}
+
+	/*--------------------------------------*/
+	/*          BACK TO HOME PAGE           */
+	/*--------------------------------------*/
+	/*
+	*   @name       backToHomePage
+	*   @author     Mariateresa Mollica (m.mollica@bit2win.com)
+	*   @desc       Method used in the App Mobile appointment detail page, it redirect to the Home page
+	*   @param 	    \\ 
+	*   @return     PageReference
+	*
+	*/
+	global PageReference backToHomePage()
+	{
+		PageReference homePage = new PageReference('/apex/ITA_IFM_VFP057_AM_Homepage');
+
+		return homePage;
+	} 
+}

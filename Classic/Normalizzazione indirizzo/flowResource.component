@@ -1,0 +1,557 @@
+<apex:component >
+  <style>
+         .btn{
+            display:none;
+         }
+         .loading_custom {
+            background: URL("/resource/LoadingAutocomplete") right center no-repeat;
+            //z-index: 10000;
+            position: relative;
+        }
+        .wait, body.wait * {
+            cursor: wait !important; }
+        .ui-autocomplete {
+            height:auto;max-height: 300px; overflow-y: scroll; overflow-x: hidden;}
+
+        div[id$=":suggeritore"]{
+            //position: fixed;
+            margin-left:10px;
+            width:530px;
+            height:100%;
+            float:right;
+        }
+        div[id$=":indicatore"]{
+            height:31px;
+            width:9px;
+            float:right;
+            margin-left:3px;
+        }
+        div[id$="masterCont"]{
+            overflow:auto;
+        }
+
+        div[id$="contCent"]{
+            overflow:auto;
+        }
+        .ClassA{
+        width:20%;
+    }
+    .ClassC{
+        width:20%;
+    }
+    .titolo_pageBlockSection {
+        font: Arial;
+        font-size:16px;
+        font-weight: bold;
+    }
+        .messaggi li {
+      padding: 3px;
+    }
+        .labelDisabled {
+            color: grey;
+        }
+
+    .errore
+        {
+          color:#d74c3b;
+        }
+
+        .ui-autocomplete-loading {
+            background: URL("/resource/LoadingAutocomplete") right center no-repeat;
+            //z-index: 10000;
+            position: relative;
+        }
+        .wait, body.wait * {
+            cursor: wait !important; }
+        .ui-autocomplete {
+            height:auto;max-height: 300px; overflow-y: scroll; overflow-x: hidden;}
+   </style>
+
+   <script>
+    var j$ = jQuery.noConflict();
+
+     j$( document ).ready(function() {
+     console.log('ABILITO I BOTTONI');
+     j$(".btn").show();
+     j$(document.body).keydown(function (e) {
+
+            var elm = e.target.nodeName.toLowerCase();
+            //console.log('attributo valore'+ e.target.getAttribute('readonly'));
+            if ( e.which==13 && elm  !== 'textarea' || e.which == 8 && (elm !== 'input' && elm  !== 'textarea' || (e.target.getAttribute('readonly')==true || e.target.getAttribute('readonly')=='readonly'))) {
+
+                //console.log('return pressed');
+                e.preventDefault();
+                //console.log('return pressed');
+                e.preventDefault();
+            }
+            // stopping event bubbling up the DOM tree..
+            e.stopPropagation();
+        });
+});
+     var wrapperSede;
+     var wrapperClienteOLO;
+     var wrapperReferenteTecnico;
+
+     function addLoading(idElement)
+     {
+        console.log('addLoading');
+        j$(idElement).addClass('loading_custom');
+     }
+
+     function removeLoading(idElement)
+     {
+        console.log('removeLoading');
+        j$(idElement).removeClass('loading_custom');
+     }
+
+     function twistSection(twisty, sectionId)
+        {
+            var parentDiv = twisty;
+            while (parentDiv.tagName != 'DIV') { parentDiv = parentDiv.parentNode; }
+            var headerId = sectionId || (parentDiv.id.split('_'))[1];
+            var div = parentDiv.nextSibling;
+            var elemWasOn = false;
+            if (div.style.display != 'none')
+            {
+                div.style.display = 'none';
+                twisty.className ='showListButton';
+                twisty.alt = twisty.title = 'Mostra sezione';
+                elemWasOn = true;
+            }
+            else
+            {
+                div.style.display = 'block';
+                twisty.className ='hideListButton';
+                twisty.alt = twisty.title = 'Nascondi sezione';
+                elemWasOn = false;
+            }
+        }
+
+     //disabilita pulsanti e input nel form se il cambio di un campo richiede tempo
+     function bloccaTutto(){
+        j$('[id$="mainForm"]').find(".btn").attr('disabled','disabled');
+        j$('[id$="mainForm"]').find(".btn").addClass('btnDisabled');
+        j$('[id$="mainForm"]').find(":input").attr('disabled','disabled');
+
+     }
+     //function to block the whole page
+     function blockPage(x){
+       j$.blockUI({ message: '<img src="/img/loading32.gif" alt="" /><br/><h1>'+x+'</h1>',
+         css: {
+          border: 'none',
+          padding: '15px',
+          '-webkit-border-radius': '10px',
+          '-moz-border-radius': '10px',
+          opacity: .9
+         }
+       });
+       return false;
+     }
+     //function to unblock the page
+     function unblockPage(){
+       j$.unblockUI();
+     }
+     function aggiornaComponenti(componenti)
+     {//in componenti vengono inseriti le actionFunction da richiamare separati da ;
+        var componentiDaAggiornare=componenti.split(";");
+        for(i=0;i<componentiDaAggiornare.length;i++)
+        {
+            //richiamo le action function
+            console.log('Chiamata aggiorna componenti: '+componentiDaAggiornare);
+            window[componentiDaAggiornare[i]]();
+        }
+        unblockPage();
+     }
+
+//no return backpage
+/*(function ($, global) {
+
+    var _hash = "!",
+    noBackPlease = function () {
+        global.location.href += "#";
+
+        setTimeout(function () {
+            global.location.href += "!";
+        }, 50);
+    };
+
+    global.setInterval(function () {
+        if (global.location.hash != _hash) {
+            global.location.hash = _hash;
+        }
+    }, 100);
+
+    global.onload = function () {
+        noBackPlease();
+
+// disables backspace on page except on input fields and textarea.
+        $(document.body).keydown(function (e) {
+            var elm = e.target.nodeName.toLowerCase();
+            if (e.which == 8 && elm !== 'input' && elm  !== 'textarea') {
+                e.preventDefault();
+            }
+            // stopping event bubbling up the DOM tree..
+            e.stopPropagation();
+        });
+    }
+
+})(jQuery, window);*/
+
+//funzioni per normalizzazione indirizzo
+function esc(myid) {
+            return '#' + myid.replace(/(:|\.)/g, '\\\\$1');
+        }
+
+        function resetComune(wrapper)
+        {
+            console.log("reset comune");
+            j$(esc(wrapper.comune)).val("");
+            j$(esc(wrapper.comune)).attr("value", "");
+            j$(esc(wrapper.comune)).removeAttr('value');
+            j$(esc(wrapper.istat)).val("");
+            j$(esc(wrapper.idGroupComuni)).val("");
+            j$(esc(wrapper.siglaprovincia)).val("");
+            j$(esc(wrapper.cittaws)).val("");
+            j$(esc(wrapper.comune)).change();
+        }
+
+        function resetVia(wrapper)
+        {
+            console.log("reset Via");
+            j$(esc(wrapper.indirizzo)).val("");
+            j$(esc(wrapper.indirizzo)).attr("value", "");
+            j$(esc(wrapper.indirizzo)).removeAttr('value');
+            j$(esc(wrapper.particella)).val("");
+            j$(esc(wrapper.idGroupVie)).val("");
+            j$(esc(wrapper.indirizzows)).val("");
+            j$(esc(wrapper.indirizzo)).change();
+        }
+
+        function resetCivico(wrapper)
+        {
+            console.log("reset civico");
+            j$(esc(wrapper.civico)).val("");
+            j$(esc(wrapper.civico)).attr("value", "");
+            j$(esc(wrapper.civico)).removeAttr('value');
+            j$(esc(wrapper.idGroupCivici)).val("");
+            j$(esc(wrapper.esponenteCivico)).val("");
+            j$(esc(wrapper.civicoNew)).val("");
+            j$(esc(wrapper.normalizzato)).val("");
+            j$(esc(wrapper.nuovaCopertura)).val("");
+            j$(esc(wrapper.idSgu)).val("");
+            j$(esc(wrapper.idCabinet)).val("");
+            j$(esc(wrapper.idSguFtts)).val("");
+            j$(esc(wrapper.tipoelemento)).val("");
+            j$(esc(wrapper.civicows)).val("");
+            j$(esc(wrapper.civico)).change();
+
+        }
+
+        function readOnlyAll(servizio,wrapper)
+        {
+         console.log("disabilito gli elementi");
+         //j$(esc(comune)).attr('readonly', true);
+         /*if(servizio=="comune")
+         {
+            j$(esc(wrapper.indirizzo)).attr('readonly', true);
+            j$(esc(wrapper.civico)).attr('readonly', true);
+         }
+         if(servizio="via"){
+            j$(esc(wrapper.comune)).attr('readonly', true);
+            //j$(esc(wrapper.indirizzo)).attr('readonly', true);
+            j$(esc(wrapper.civico)).attr('readonly', true);
+
+         } */
+         j$(esc(wrapper.comune)).attr('readonly', true);
+         j$(esc(wrapper.indirizzo)).attr('readonly', true);
+         j$(esc(wrapper.civico)).attr('readonly', true);
+         /**
+        * @author: Marino Antonio
+        * @date: 06/06/2016
+        * @Bug: blocco dei pulsanti quando si cambia il comune
+        */
+         j$('[id$="mainForm"]').find(".btn").attr('disabled','disabled');
+         j$('[id$="mainForm"]').find(".btn").addClass('btnDisabled');
+
+        }
+
+        function enableAll(wrapper)
+        {
+         console.log(JSON.stringify(wrapper));
+         j$(esc(wrapper.comune)).attr('readonly', false);
+         j$(esc(wrapper.indirizzo)).attr('readonly', false);
+         j$(esc(wrapper.civico)).attr('readonly', false);
+         /**
+        * @author: Marino Antonio
+        * @date: 06/06/2016
+        * @Bug: blocco dei pulsanti quando si cambia il comune
+        */
+         j$('[id$="mainForm"]').find(".btn").removeAttr('disabled');
+         j$('[id$="mainForm"]').find(".btn").removeClass('btnDisabled');
+
+        }
+
+          function callNormalizationWS(autocomplete_textbox, minLength, servizio, campoSede,wrapper,tipo) {
+            var sObjects;
+            var queryTerm;
+            var selected = false;
+            console.log('chiamataNormalizationWS');
+            var flagCopertura='Y';
+
+            var $input = j$(esc(autocomplete_textbox)).autocomplete({
+                minLength: minLength,
+                formatResult: function(row) {
+                  return decodeURI(row);
+                },
+                delay: 500,
+                source: function (request, response) {
+                    queryTerm = request.term;
+                    //j$('idGroupComuni').val();
+                    //j$('idGroupVie').val();
+                    //chiamata remoteMethod
+                    console.log("chiamataWS "+servizio);
+                    //readOnlyAll(servizio);
+                    console.log(queryTerm + servizio + j$(esc(wrapper.idGroupComuni)).val() + j$(esc(wrapper.idGroupVie)).val(),j$(esc(wrapper.idGroupCivici)).val());
+                    AutoCompleteController2.richiamaWS(queryTerm, servizio, j$(esc(wrapper.idGroupComuni)).val() , j$(esc(wrapper.idGroupVie)).val(), j$(esc(wrapper.idGroupCivici)).val() ,function (result, event) {
+
+                        if (event.type == 'exception') {
+                            console.log(event.message);//timeout
+                            alert("si è verificato un problema riprovare a eseguire l'operazione");
+                            j$(esc(autocomplete_textbox)).autocomplete( "close" );
+
+                            if (servizio == 'via'){
+                                resetVia(wrapper);
+                            }
+                            if (servizio == 'comune'){
+                                resetComune(wrapper);
+
+                            }
+                            if (servizio == 'civico'){
+                                resetCivico(wrapper);
+                            }
+                            enableAll(wrapper);
+                            removeLoading(esc(autocomplete_textbox));
+                        } else {
+                            sObjects = result;
+                            response(sObjects);
+                            console.log('result: '+JSON.stringify(result));
+                            //j$('body').removeClass('wait');
+                        }
+                    },{escape: false});
+                },
+                search: function( event, ui )
+                {
+                    console.log("search");
+                    console.log(servizio);
+                    readOnlyAll(servizio,wrapper);
+                    addLoading(esc(autocomplete_textbox));
+
+                },
+                response: function (event, ui) {
+                    console.log("response");
+                     if (servizio == 'via'){
+                        resetVia(wrapper);
+                    }
+                    if (servizio == 'comune'){
+                        resetComune(wrapper);
+
+                    }
+                    if (servizio == 'civico'){
+                        resetCivico(wrapper);
+                    }
+                    enableAll(wrapper)
+                    removeLoading(esc(autocomplete_textbox));
+                    //return false;
+                },
+                focus: function (event, ui) {
+                    console.log("focus ---" + ui.item[campoSede]+"-----");
+                    j$(esc(autocomplete_textbox)).val(ui.item[campoSede]);
+                    selected = false;
+                    return false;
+                },
+                close: function(event, ui) {
+                    console.log("close"+selected)
+                    if(!selected){
+                        j$(esc(autocomplete_textbox)).val("");
+                        j$(esc(autocomplete_textbox)).removeAttr('value');
+                        j$(esc(autocomplete_textbox)).change();
+                         if (servizio == 'via'){
+                          resetCivico(wrapper);
+                        }
+                        if (servizio == 'comune'){
+                            resetVia(wrapper);
+                            resetCivico(wrapper);
+
+                        }
+
+                    }
+                    selected = false;
+                    //enableAll();
+                },
+                select: function (event, ui) {
+                    console.log("select")
+                    selected = true;
+
+                    //enableAll();
+                    j$(esc(autocomplete_textbox)).val(decodeURI(ui.item[campoSede]));
+                    j$(esc(wrapper.ricsedecritica)).val('Y');
+                    j$(esc(wrapper.idsedeimpianto)).val('');
+                    if (servizio == 'via'){
+                        j$(esc(wrapper.particella)).val(ui.item['Particella__c']);
+                        //console.log(particella);
+                        //console.log(j$(esc(particella)));
+                        j$(esc(wrapper.idGroupVie)).val(ui.item['IdGruppoVie__c']);
+                        j$(esc(wrapper.indirizzows)).val(ui.item['Indirizzo__c']);
+                        resetCivico(wrapper);
+                    }
+                    if (servizio == 'comune'){
+                        j$(esc(wrapper.istat)).val(ui.item['Codice_ISTAT__c']);
+                        j$(esc(wrapper.idGroupComuni)).val(ui.item['IdGruppoComuni__c']);
+                        j$(esc(wrapper.siglaprovincia)).val(ui.item['Sigla_provincia__c']);
+                        j$(esc(wrapper.cittaws)).val(ui.item['Citt__c']);
+                        resetVia(wrapper);
+                        resetCivico(wrapper);
+
+                    }
+                    if (servizio == 'civico'){
+                        j$(esc(wrapper.idGroupCivici)).val(ui.item['IdGruppoCivici__c']);
+                        j$(esc(wrapper.esponenteCivico)).val(ui.item['Esponente_Civico__c']);
+                        j$(esc(wrapper.civicoNew)).val(ui.item['Civico__c']);
+                        j$(esc(wrapper.normalizzato)).val(ui.item['Indirizzo_Normalizzato__c']);
+                        j$(esc(wrapper.nuovaCopertura)).val(ui.item['Nuova_Copertura__c']);
+                        j$(esc(wrapper.idSgu)).val(ui.item['Codice_vendibilit__c']);
+                        j$(esc(wrapper.idCabinet)).val(ui.item['FW_Id_Cabinet__c']);
+                        j$(esc(wrapper.idSguFtts)).val(ui.item['FW_Id_SGUFTTs__c']);
+                        j$(esc(wrapper.tipoelemento)).val(ui.item['Tipo_Elemento__c']);
+                        j$(esc(wrapper.civicows)).val(ui.item['Numero_civico__c']);
+                    }
+                    /*
+                    console.log(j$(esc(autocomplete_textbox)).val());
+                    console.log(j$(esc(particella)).val());
+                    console.log(j$(esc(istat)).val());
+                    console.log(j$(esc(idGroupCivici)).val());
+                    console.log(j$(esc(idGroupComuni)).val());
+                    console.log(j$(esc(normalizzato)).val());
+                    */
+                    j$(esc(autocomplete_textbox)).change();
+                    return false;
+                    }
+            })
+            .data("ui-autocomplete")._renderItem = function (ul, item) {
+                var entry = "<a>";
+                if (servizio == 'via') {
+                    entry = entry + item['Particella__c'] +' '+ item[campoSede];
+                }
+                else {
+                   entry = entry + item[campoSede];
+                }
+                entry = entry + "</a>";
+                //entry = entry.replace(queryTerm, "<b>" + queryTerm + "</b>");
+                return j$("<li></li>")
+                    .data("item.autocomplete", item)
+                    .append(entry)
+                    .appendTo(ul);
+            };
+            selected = false;
+        }; //closing callnormalizationWS
+     //autocompleteGenerico
+     function autocompleteGeneric(autocomplete_textbox,hiddenId,attributename,objectname,queryField,viewFields, filterField, additionalField,orField){
+      var sObjects;
+        var queryTerm;
+
+        j$(esc(autocomplete_textbox)).autocomplete({
+            minLength: 2,
+            source: function(request, response) {
+                        queryTerm = request.term;
+                            console.log(filterField);
+                            if(filterField!=''){
+                                //var mappa = JSON.stringify(filterField);
+                                mappa=filterField;
+                                console.log(mappa);
+                            }
+                            else mappa = {};
+                        console.log('mappa'+mappa);
+                         if(orField!=''){
+                                //var mappa2 = JSON.stringify(orField);
+                                mappa2=orField;
+                            }
+                            else mappa2 = {};
+
+                        console.log(mappa2);
+                        AutoCompleteController2.findSObjects(objectname, queryField, filterField, request.term, additionalField,mappa2, function(result, event){
+
+                            if(event.type == 'exception') {
+                                  alert(event.message);
+                            } else {
+                                 sObjects = result;
+                                 response(sObjects);
+                                 console.log(result);
+                            }
+                        });
+                   },
+            search: function( event, ui )
+                {
+                    console.log("search");
+                    addLoading(esc(autocomplete_textbox));
+
+                },
+                response: function (event, ui) {
+                    console.log("response");
+                    removeLoading(esc(autocomplete_textbox));
+                    //j$(esc(autocomplete_textbox)).val("");
+                    //return false;
+                },
+            focus: function( event, ui ) {
+                    //console.log(ui.item.Id);
+                    var qfi = queryField.split(",");
+                    j$(esc(autocomplete_textbox)).val( ui.item[qfi[0]] );
+
+                    return false;
+                    },
+            select: function( event, ui ) {
+                    addLoading(esc(autocomplete_textbox));
+                    var mappa = filterField;
+                        //var id1 = j$("[id$='hiddenId']").attr('id');
+                        var id1 = j$(esc(hiddenId)).attr('id');
+                        if(id1!=null)
+                            j$(esc(id1)).val( ui.item.Id);
+                        var arr = j$("[id$='"+attributename+"'Field']");
+                        //console.log('array length'+arr.length);
+                        if(arr.length>0)
+                        j$.each(additionalField.split(",") , function(key, value) {
+                            //console.log(value);
+                            j$(esc(arr[key].id)).attr( 'value', ui.item[value]);
+                        });
+                        j$(esc(autocomplete_textbox)).change();
+                        removeLoading(esc(autocomplete_textbox));
+                        return false;
+                    }
+
+         })
+         .data( "ui-autocomplete" )._renderItem = function( ul, item ) {
+            var entry = "<a> ";
+            var qf = viewFields;
+            if(qf!='')
+            j$.each(viewFields.split(",") , function(key, value) {
+                entry = entry  +" "+ item[value];
+            });
+            else{
+                var qf = queryField;
+                if(qf!='')
+                j$.each(!queryField.split(",") , function(key, value) {
+                    entry = entry  +" "+ item[value];
+                });
+
+            }
+            entry = entry + "</a>";
+            entry = entry.replace(queryTerm, "<b>" + queryTerm + "</b>");
+            return j$( "<li></li>" )
+                .data( "ui-autocomplete-item", item )
+                .append( entry )
+                .appendTo( ul );
+
+        }
+    }
+    </script>
+
+</apex:component>

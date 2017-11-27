@@ -1,0 +1,83 @@
+<!-- DEPLOYMENT -->
+<script type='text/javascript' src='https://c.la1-c1cs-lon.salesforceliveagent.com/content/g/js/35.0/deployment.js'></script>
+<script type='text/javascript'>
+		
+	function esegui () {
+		if (document.getElementById('2').checked){
+			liveagent.startChat('57325000000004N'); 				
+		}
+		else{					
+			window.open('http://www.sky.it/assistenza/contatta.html');
+		}
+	}
+	function buttonCallback(e) {
+		if (e == liveagent.BUTTON_EVENT.BUTTON_AVAILABLE) {
+			document.getElementById('liveagent_invite_button_57325000000004N').style.display 
+			  = 'block';
+			document.getElementById('liveagent_invite_button_57325000000004N').style.left 
+			  = '800px';
+			document.getElementById('liveagent_invite_button_57325000000004N').style.top 
+			  = '500px';
+			document.getElementById('liveagent_invite_button_57325000000004N').style.position 
+			  = 'relative';
+		}
+		if (e == liveagent.BUTTON_EVENT.BUTTON_UNAVAILABLE) {
+			document.getElementById('liveagent_invite_button_57325000000004N').style.display = 'none;';
+		}
+		if (e == liveagent.BUTTON_EVENT.BUTTON_ACCEPTED) {
+			document.getElementById('liveagent_invite_button_57325000000004N').style.display = 'none';
+		}
+		if (e == liveagent.BUTTON_EVENT.BUTTON_REJECTED) {
+			document.getElementById('liveagent_invite_button_57325000000004N').style.display = 'none';
+		}
+	}
+	
+	liveagent.addCustomDetail("IdAOL", new Date().getTime());
+	//liveagent.addCustomDetail("IdAOL", '1445361827509');
+	liveagent.findOrCreate("Info__c").map("ID_AOL__c", "IdAOL", false, false,true);
+	liveagent.findOrCreate("Info__c").showOnCreate();
+	liveagent.findOrCreate("Info__c").saveToTranscript("Info__c","Info__c");
+	liveagent.findOrCreate("Survey_Operatore__c").map("ID_AOL__c", "IdAOL", false, false,true);
+	liveagent.findOrCreate("Survey_Operatore__c").showOnCreate();
+	liveagent.findOrCreate("Survey_Operatore__c").saveToTranscript("Survey_Operatore__c","Survey_Operatore__c");
+	liveagent.init('https://d.la1-c1cs-lon.salesforceliveagent.com/chat', '572250000008OKG', '00D25000000DJeh');
+	liveagent.addButtonEventHandler('57325000000004N', buttonCallback);
+	
+</script>
+<!--  FINE  DEPLOYMENT -->
+
+
+<!-- --- INVITATION STRUCTURE --------------------------------------------------------------------------------------------------- -->	
+<!-- id necessario ----------- -->
+
+
+<div id="liveagent_invite_button_57325000000004N" style="position:relative;margin:0px; padding:0px; background: #ffffff;width:314px;border: 2px solid #06d971;height: 83px;display:none;">
+	<img src="https://abbonamento.sky.it/cmsaol/statics/images/liveperson/aol_pd.png.jpg" style="float: left; padding:12px 14px 0 19px"/>
+	<div style="width:314px;height:105px">
+		<!-- -------------------------------------------------------------------------------------------------------------------------- -->
+        <div class="font18" style="line-height: 18px; font-size:14px; font-family:SkyTextMedium; ">SERVE AIUTO?<br>
+            <span class="font23" style="line-height: 18px;font-size:14px;font-family:SkyTextRegular;">Parla con il tuo assistente Sky.</span>
+        </div>
+		<!-- -------------------------------------------------------------------------------------------------------------------------- -->
+         <div class="fleft font15"><span style="line-height: 18px; font-size:14px; font-family:SkyTextMedium;">Gi&agrave; abbonato:</span><br>
+             &nbsp;SI&nbsp;&nbsp;
+			 <input type="radio" id="1" name="giabbo" value="SI">
+             &nbsp;NO
+            <input type="radio" id="2" name="giabbo" value="NO" checked> 
+			
+        </div>
+		<!-- -------------------------------------------------------------------------------------------------------------------------- -->
+        <div class="fleft" id="lpdivbuttonclick" class="img_MenuChat" style="position:relative;left:170px;top:-35px">
+            <a id="liveagent_button_online_57325000000004N" href="#" onclick="esegui();">
+            <img src="https://abbonamento.sky.it/cmsaol/statics/images/liveperson/aol_attiva_chat.png" style="margin-top: 3px; margin-left: 20px;"></a>
+        </div>
+		<!-- -------------------------------------------------------------------------------------------------------------------------- -->
+	</div>
+</div>
+<!-- --- END INVITATION STRUCTURE ------------------------------------------------------------------------------------------------ -->
+	
+
+
+
+	
+	

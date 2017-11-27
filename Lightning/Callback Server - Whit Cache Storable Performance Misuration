@@ -1,0 +1,14 @@
+var action = component.get("c.findAll");
+var page = component.get("v.page");
+action.setStorable();
+action.setParams({
+    "page": page
+});
+action.setCallback(this, function(response) {
+    console.log("Page %d loaded in %fms", 
+        page,
+        performance.now() - startTime);
+    // handle response
+};
+var startTime = performance.now();
+$A.enqueueAction(action);

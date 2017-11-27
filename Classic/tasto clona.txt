@@ -1,0 +1,1 @@
+/{!OpportunityLineItem.Id}/e?clone=1&retURL=%2F{!OpportunityLineItem.Id}

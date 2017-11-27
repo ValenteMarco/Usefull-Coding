@@ -1,0 +1,18 @@
+trigger crea_prodotto_opportunuta_dopo_eliminazione on OpportunityLineItem (before delete) {
+  //list <OpportunityLineItem> vloli = new list <OpportunityLineItem>();
+  //vlopli=Trigger.old;
+    list <OpportunityLineItem> Nloli = new list <OpportunityLineItem>();
+    for (Integer i = 0; i < Trigger.Old.size(); i++){
+      if((trigger.old[i].Fase_Opportunit__c=='Chiusa vinta')||(trigger.old[i].Fase_Opportunit__c=='Ordine ricevuto')){   
+       OpportunityLineItem nopli = new OpportunityLineItem ();
+       nopli.OpportunityId=Trigger.Old[i].OpportunityId;
+       nopli.PricebookEntryId=Trigger.Old[i].PricebookEntryId;
+       nopli.Famiglia_prodotto2__c=Trigger.Old[i].Famiglia_prodotto2__c;
+       nopli.Quantity=Trigger.Old[i].Quantity;
+       nopli.TotalPrice=Trigger.Old[i].TotalPrice;
+       nopli.Description=Trigger.Old[i].Description;
+       Nloli.add(nopli);
+       }
+      }
+    insert Nloli;
+}

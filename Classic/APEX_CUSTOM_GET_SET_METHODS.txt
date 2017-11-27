@@ -1,0 +1,7 @@
+	public transient Map < String, Audience__c > ascolti;
+	public Map < String, Audience__c > getascolti() {
+		return getgrpManager().audienceWithoutChannel;
+	}	
+	public void setascolti(Map < String, Audience__c > ascol) {
+		this.ascolti = ascol;
+	}
