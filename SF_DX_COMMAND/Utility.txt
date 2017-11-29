@@ -1,0 +1,19 @@
+Create an alias DevHub by using -a and make this the default org using -d. To authorize the Dev Hub, in the command window enter the web login flow. The following command opens the Salesforce login page in the web browser:
+
+	sfdx force:auth:web:login -d -a DevHub
+
+	
+Creastion folder projec:
+mkdir my_sfdx_project
+cd my_sfdx_project
+
+Clone git repository:
+
+git clone https://github.com/forcedotcom/sfdx-dreamhouse.git
+
+Creazione nuovo branch:
+git checkout -b my_branch
+
+Help command:
+sfdx force --help
+
