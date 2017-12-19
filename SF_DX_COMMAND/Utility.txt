@@ -2,6 +2,10 @@ Create an alias DevHub by using -a and make this the default org using -d. To au
 
 	sfdx force:auth:web:login -d -a DevHub
 	
+Set default con alias:
+	sfdx force:config:set defaultusername=test-fdih3lne6b4x@demo_company.net
+
+
 Creastion folder projec:
 
 	mkdir my_sfdx_project
